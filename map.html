@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深圳技术大学校园导航系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 360px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 25px rgba(0,0,0,0.12);
+            border-radius: 0 16px 16px 0;
+        }
+
+        .sidebar h1 {
+            color: #2c3e50;
+            font-size: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #34495e;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 12px 40px 12px 14px;
+            border: 2px solid #e8ecef;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #2c3e50;
+            background: #fafbfc;
+            transition: all 0.3s;
+        }
+
+        .search-container input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-container input::placeholder {
+            color: #a0aec0;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #95a5a6;
+            font-size: 16px;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 2px solid #e8ecef;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .suggestions.active {
+            display: block;
+        }
+
+        .suggestions:empty {
+            display: none;
+        }
+
+        .suggestions.loading::before {
+            content: '';
+            display: block;
+            padding: 12px;
+            text-align: center;
+            color: #667eea;
+            font-size: 14px;
+        }
+
+        .suggestion-header {
+            padding: 10px 14px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .suggestion-item {
+            padding: 12px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: #f5f7fa;
+        }
+
+        .suggestion-item.active {
+            background: #e8f4fd;
+            color: #3498db;
+        }
+
+        .suggestion-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .suggestion-item .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .suggestion-item.active .icon {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .suggestion-item .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .suggestion-item .title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #2c3e50;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .suggestion-item.active .title {
+            color: #2980b9;
+        }
+
+        .suggestion-item .subtitle {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .suggestion-item .distance {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 500;
+            padding: 4px 8px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .suggestions-empty {
+            padding: 20px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 14px;
+        }
+
+        .suggestions-empty .icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.45);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .path-info {
+            margin-top: 20px;
+            padding: 18px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+            border: 1px solid #e9ecef;
+        }
+
+        .path-info.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .path-info h3 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .path-details {
+            font-size: 13px;
+            color: #5a6672;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .path-details strong {
+            color: #2c3e50;
+        }
+
+        .path-steps {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .path-step {
+            padding: 10px 12px;
+            background: white;
+            border-left: 4px solid #667eea;
+            margin-bottom: 8px;
+            border-radius: 0 6px 6px 0;
+            font-size: 13px;
+            color: #34495e;
+            transition: transform 0.2s;
+        }
+
+        .path-step:hover {
+            transform: translateX(4px);
+        }
+
+        .legend {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .legend h4 {
+            font-size: 14px;
+            color: #5a6672;
+            margin-bottom: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .legend-color {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .legend-color.start { 
+            background: #10b981; 
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(16, 185, 129, 0.4);
+        }
+        .legend-color.end { 
+            background: #ef4444; 
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(239, 68, 68, 0.4);
+        }
+        .legend-color.point { 
+            background: #3b82f6; 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        .legend-color.path { 
+            border-radius: 4px; 
+            width: 45px; 
+            height: 5px; 
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            box-shadow: none;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #e8ecef;
+        }
+
+        .map-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
+        }
+
+        #campus-map {
+            display: block;
+            max-width: none;
+            max-height: none;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .point-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.25s ease;
+            z-index: 20;
+        }
+
+        .point-marker:hover {
+            transform: translate(-50%, -50%) scale(1.35);
+            z-index: 30;
+        }
+
+        .point-marker.start {
+            width: 28px;
+            height: 28px;
+            background: #10b981;
+            box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.3), 0 4px 20px rgba(16, 185, 129, 0.55);
+            z-index: 40;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.3), 0 4px 20px rgba(16, 185, 129, 0.55); }
+            50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.15), 0 4px 20px rgba(16, 185, 129, 0.55); }
+        }
+
+        .point-marker.end {
+            width: 28px;
+            height: 28px;
+            background: #ef4444;
+            box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.3), 0 4px 20px rgba(239, 68, 68, 0.55);
+            z-index: 40;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.3), 0 4px 20px rgba(239, 68, 68, 0.55); }
+            50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0.15), 0 4px 20px rgba(239, 68, 68, 0.55); }
+        }
+
+        .point-marker.normal {
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 2px 12px rgba(59, 130, 246, 0.45);
+        }
+
+        .point-marker.normal:hover {
+            background: #2563eb;
+        }
+
+        .point-label {
+            position: absolute;
+            white-space: nowrap;
+            font-size: 12px;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+            z-index: 50;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .point-marker:hover .point-label {
+            opacity: 1;
+        }
+
+        .path-line {
+            stroke: url(#pathGradient);
+            stroke-width: 5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            z-index: 10;
+            filter: drop-shadow(0 3px 8px rgba(102, 126, 234, 0.5));
+        }
+
+        .path-line-animate {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawPath 1.2s ease-out forwards;
+        }
+
+        @keyframes drawPath {
+            to { stroke-dashoffset: 0; }
+        }
+
+        .nav-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.12);
+            transition: all 0.25s;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.18);
+            background: white;
+        }
+
+        .nav-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .zoom-value {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.12);
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.25s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 24px 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e8ecef;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #5a6672;
+            font-size: 14px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                border-radius: 0;
+                padding: 16px;
+                box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+                max-height: 50vh;
+                overflow-y: auto;
+            }
+            
+            .sidebar h1 {
+                font-size: 18px;
+                margin-bottom: 16px;
+            }
+            
+            .nav-controls {
+                bottom: 16px;
+                right: 16px;
+            }
+            
+            .nav-btn {
+                width: 42px;
+                height: 42px;
+                font-size: 18px;
+            }
+            
+            .suggestions {
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载数据中...</div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h1>🏫 校园导航系统</h1>
+            
+            <div class="form-group">
+                <label for="start-input">📍 起点</label>
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="start-input" 
+                        placeholder="输入起点名称..." 
+                        autocomplete="off"
+                        aria-autocomplete="list"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        role="combobox"
+                        aria-controls="start-suggestions"
+                    >
+                    <span class="search-icon" role="img" aria-label="搜索">🔍</span>
+                    <div 
+                        class="suggestions" 
+                        id="start-suggestions"
+                        role="listbox"
+                        aria-label="起点搜索建议"
+                        aria-live="polite"
+                    ></div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="end-input">🎯 终点</label>
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="end-input" 
+                        placeholder="输入终点名称..." 
+                        autocomplete="off"
+                        aria-autocomplete="list"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        role="combobox"
+                        aria-controls="end-suggestions"
+                    >
+                    <span class="search-icon" role="img" aria-label="搜索">🔍</span>
+                    <div 
+                        class="suggestions" 
+                        id="end-suggestions"
+                        role="listbox"
+                        aria-label="终点搜索建议"
+                        aria-live="polite"
+                    ></div>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="calculatePath()">🚀 开始导航</button>
+            
+            <div class="path-info" id="path-info">
+                <h3>📍 路径信息</h3>
+                <div class="path-details" id="path-details"></div>
+                <div class="path-steps" id="path-steps"></div>
+            </div>
+            
+            <div class="legend">
+                <h4>图例说明</h4>
+                <div class="legend-item"><div class="legend-color start"></div>起点</div>
+                <div class="legend-item"><div class="legend-color end"></div>终点</div>
+                <div class="legend-item"><div class="legend-color point"></div>途经点</div>
+                <div class="legend-item"><div class="legend-color path"></div>导航路径</div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div class="map-wrapper" id="map-wrapper">
+                <img id="campus-map" src="data/campus.png" alt="校园地图">
+                <svg class="overlay" id="overlay"></svg>
+            </div>
+            
+            <div class="nav-controls">
+                <button class="nav-btn" onclick="zoomOut()" title="缩小" aria-label="缩小地图">−</button>
+                <div class="zoom-value" id="zoom-value">100%</div>
+                <button class="nav-btn" onclick="zoomIn()" title="放大" aria-label="放大地图">+</button>
+                <button class="nav-btn" onclick="resetView()" title="重置视图" aria-label="重置地图视图">⟲</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        let points = [];
+        let paths = [];
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let currentPath = [];
+        let currentStartId = '';
+        let currentEndId = '';
+        let debounceTimers = { start: null, end: null };
+        let activeInputType = '';
+
+        const POPULAR_LOCATIONS = ['hall_east', 'south_dormitory', 'ai_north', 'lib_north', 'south_canteen'];
+
+        async function loadData() {
+            try {
+                const campusResponse = await fetch('data/campus.csv');
+                const campusText = await campusResponse.text();
+                parseCampusData(campusText);
+
+                const pathsResponse = await fetch('data/paths.csv');
+                const pathsText = await pathsResponse.text();
+                parsePathsData(pathsText);
+
+                setupSearchInputs();
+                renderPoints();
+                document.getElementById('loading').classList.add('hidden');
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                alert('加载数据失败，请检查数据文件是否存在！');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function parseCampusData(text) {
+            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('id'));
+            points = [];
+            lines.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 6) {
+                    const id = parts[0].trim();
+                    points.push({
+                        id: id,
+                        name: parts[1].trim(),
+                        type: parts[2].trim(),
+                        floor: parseInt(parts[3].trim()),
+                        px: parseInt(parts[4].trim()),
+                        py: parseInt(parts[5].trim()),
+                        isPopular: POPULAR_LOCATIONS.includes(id)
+                    });
+                }
+            });
+            console.log('加载地点数据:', points.length, '个地点');
+        }
+
+        function parsePathsData(text) {
+            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('start_id'));
+            paths = [];
+            lines.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 7) {
+                    paths.push({
+                        start_id: parts[0].trim(),
+                        end_id: parts[1].trim(),
+                        start_name: parts[2].trim(),
+                        end_name: parts[3].trim(),
+                        distance: parseInt(parts[4].trim()),
+                        direction: parts[5].trim(),
+                        path_type: parts[6].trim()
+                    });
+                }
+            });
+            console.log('加载路径数据:', paths.length, '条路径');
+        }
+
+        function setupSearchInputs() {
+            const startInput = document.getElementById('start-input');
+            const endInput = document.getElementById('end-input');
+            const startSuggestions = document.getElementById('start-suggestions');
+            const endSuggestions = document.getElementById('end-suggestions');
+
+            setupEnhancedSearchInput(startInput, startSuggestions, 'start');
+            setupEnhancedSearchInput(endInput, endSuggestions, 'end');
+
+            startInput.value = '会堂东门';
+            endInput.value = '南区宿舍';
+            currentStartId = 'hall_east';
+            currentEndId = 'south_dormitory';
+        }
+
+        function debounce(func, delay) {
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(debounceTimers[activeInputType]);
+                debounceTimers[activeInputType] = setTimeout(() => {
+                    func.apply(context, args);
+                }, delay);
+            };
+        }
+
+        function setupEnhancedSearchInput(input, suggestions, type) {
+            const debouncedSearch = debounce(function(query) {
+                performSearch(input, suggestions, query, type);
+            }, 350);
+
+            input.addEventListener('input', function() {
+                activeInputType = type;
+                const query = this.value.trim().toLowerCase();
+                
+                if (query.length < 2) {
+                    clearTimeout(debounceTimers[type]);
+                    suggestions.innerHTML = '';
+                    suggestions.classList.remove('active');
+                    input.setAttribute('aria-expanded', 'false');
+                    return;
+                }
+                
+                debouncedSearch(query);
+            });
+
+            input.addEventListener('focus', function() {
+                activeInputType = type;
+                const query = this.value.trim().toLowerCase();
+                if (query.length >= 2) {
+                    debouncedSearch(query);
+                } else if (points.length > 0) {
+                    showPopularLocations(suggestions, type);
+                }
+            });
+
+            input.addEventListener('blur', function() {
+                setTimeout(() => {
+                    suggestions.classList.remove('active');
+                    input.setAttribute('aria-expanded', 'false');
+                }, 200);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                const items = suggestions.querySelectorAll('.suggestion-item:not(.disabled)');
+                const activeItem = suggestions.querySelector('.suggestion-item.active');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeItem) {
+                        activeItem.classList.remove('active');
+                        activeItem.setAttribute('aria-selected', 'false');
+                        const next = activeItem.nextElementSibling;
+                        if (next && !next.classList.contains('disabled')) {
+                            next.classList.add('active');
+                            next.setAttribute('aria-selected', 'true');
+                            next.scrollIntoView({ block: 'nearest' });
+                        }
+                    } else if (items.length > 0) {
+                        items[0].classList.add('active');
+                        items[0].setAttribute('aria-selected', 'true');
+                    }
+                    input.setAttribute('aria-expanded', 'true');
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeItem) {
+                        activeItem.classList.remove('active');
+                        activeItem.setAttribute('aria-selected', 'false');
+                        const prev = activeItem.previousElementSibling;
+                        if (prev && !prev.classList.contains('disabled')) {
+                            prev.classList.add('active');
+                            prev.setAttribute('aria-selected', 'true');
+                            prev.scrollIntoView({ block: 'nearest' });
+                        }
+                    } else if (items.length > 0) {
+                        items[items.length - 1].classList.add('active');
+                        items[items.length - 1].setAttribute('aria-selected', 'true');
+                    }
+                    input.setAttribute('aria-expanded', 'true');
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const selected = activeItem || items[0];
+                    if (selected && !selected.classList.contains('disabled')) {
+                        selectSuggestion(selected, input, suggestions, type);
+                    }
+                } else if (e.key === 'Escape') {
+                    suggestions.classList.remove('active');
+                    input.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+                    suggestions.classList.remove('active');
+                    input.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        function showPopularLocations(suggestions, type) {
+            const popular = points.filter(p => p.isPopular);
+            
+            if (popular.length === 0) return;
+
+            suggestions.innerHTML = `
+                <div class="suggestion-header" role="presentation">热门地点</div>
+                ${popular.map((p, index) => `
+                    <div 
+                        class="suggestion-item" 
+                        data-id="${p.id}" 
+                        data-name="${p.name}"
+                        role="option"
+                        aria-selected="false"
+                        tabindex="0"
+                    >
+                        <span class="icon">${getTypeIcon(p.type)}</span>
+                        <div class="content">
+                            <div class="title">${p.name}</div>
+                            <div class="subtitle">${getTypeName(p.type)}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            suggestions.classList.add('active');
+            input.setAttribute('aria-expanded', 'true');
+
+            suggestions.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    selectSuggestion(item, input, suggestions, type);
+                });
+                item.addEventListener('mouseenter', () => {
+                    item.classList.add('active');
+                    item.setAttribute('aria-selected', 'true');
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.classList.remove('active');
+                    item.setAttribute('aria-selected', 'false');
+                });
+            });
+        }
+
+        async function performSearch(input, suggestions, query, type) {
+            if (!query || query.length < 2) {
+                suggestions.innerHTML = '';
+                suggestions.classList.remove('active');
+                input.setAttribute('aria-expanded', 'false');
+                return;
+            }
+
+            try {
+                suggestions.innerHTML = '<div class="suggestion-header">搜索中...</div>';
+                suggestions.classList.add('active');
+                input.setAttribute('aria-expanded', 'true');
+
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                const results = searchLocations(query);
+
+                if (results.length === 0) {
+                    suggestions.innerHTML = `
+                        <div class="suggestions-empty">
+                            <div class="icon">🔍</div>
+                            <div>未找到匹配的地点</div>
+                            <div style="font-size: 12px; margin-top: 4px;">请尝试其他关键词</div>
+                        </div>
+                    `;
+                } else {
+                    suggestions.innerHTML = `
+                        <div class="suggestion-header" role="presentation">找到 ${results.length} 个结果</div>
+                        ${results.map((result, index) => `
+                            <div 
+                                class="suggestion-item" 
+                                data-id="${result.id}" 
+                                data-name="${result.name}"
+                                role="option"
+                                aria-selected="false"
+                                aria-posinset="${index + 1}"
+                                aria-setsize="${results.length}"
+                                tabindex="0"
+                            >
+                                <span class="icon">${getTypeIcon(result.type)}</span>
+                                <div class="content">
+                                    <div class="title">${highlightMatch(result.name, query)}</div>
+                                    <div class="subtitle">${getTypeName(result.type)}</div>
+                                </div>
+                                ${result.distance ? `<span class="distance">${result.distance}m</span>` : ''}
+                            </div>
+                        `).join('')}
+                    `;
+
+                    suggestions.querySelectorAll('.suggestion-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            selectSuggestion(item, input, suggestions, type);
+                        });
+                        item.addEventListener('mouseenter', () => {
+                            const active = suggestions.querySelector('.suggestion-item.active');
+                            if (active) {
+                                active.classList.remove('active');
+                                active.setAttribute('aria-selected', 'false');
+                            }
+                            item.classList.add('active');
+                            item.setAttribute('aria-selected', 'true');
+                        });
+                        item.addEventListener('mouseleave', () => {
+                            item.classList.remove('active');
+                            item.setAttribute('aria-selected', 'false');
+                        });
+                        item.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                selectSuggestion(item, input, suggestions, type);
+                            }
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('搜索失败:', error);
+                suggestions.innerHTML = `
+                    <div class="suggestions-empty">
+                        <div class="icon">⚠️</div>
+                        <div>搜索出现错误</div>
+                        <div style="font-size: 12px; margin-top: 4px;">请稍后重试</div>
+                    </div>
+                `;
+            }
+        }
+
+        function searchLocations(query) {
+            const results = points.map(point => {
+                const nameLower = point.name.toLowerCase();
+                const idLower = point.id.toLowerCase();
+                
+                let score = 0;
+                
+                if (nameLower === query) {
+                    score += 100;
+                } else if (nameLower.startsWith(query)) {
+                    score += 80;
+                } else if (nameLower.includes(query)) {
+                    score += 60;
+                }
+                
+                if (point.isPopular) {
+                    score += 20;
+                }
+                
+                const typeOrder = ['college', 'entrance', 'library', 'canteen', 'dormitory', 'playground', 'stair', 'intersection'];
+                const typeIndex = typeOrder.indexOf(point.type);
+                if (typeIndex !== -1) {
+                    score += (typeOrder.length - typeIndex) * 5;
+                }
+                
+                return {
+                    ...point,
+                    score: score
+                };
+            }).filter(p => p.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8);
+
+            return results;
+        }
+
+        function highlightMatch(text, query) {
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<strong style="color: #667eea;">$1</strong>');
+        }
+
+        function getTypeIcon(type) {
+            const icons = {
+                'entrance': '🚪',
+                'stair': '🪜',
+                'intersection': '🔀',
+                'college': '🏛️',
+                'playground': '⚽',
+                'canteen': '🍽️',
+                'dormitory': '🏠',
+                'library': '📚',
+                'building': '🏢'
+            };
+            return icons[type] || '📍';
+        }
+
+        function getTypeName(type) {
+            const names = {
+                'entrance': '入口',
+                'stair': '楼梯',
+                'intersection': '路口',
+                'college': '学院',
+                'playground': '操场',
+                'canteen': '食堂',
+                'dormitory': '宿舍',
+                'library': '图书馆',
+                'building': '建筑'
+            };
+            return names[type] || type;
+        }
+
+        function selectSuggestion(item, input, suggestions, type) {
+            const id = item.dataset.id;
+            const name = item.dataset.name;
+            
+            input.value = name;
+            
+            if (type === 'start') {
+                currentStartId = id;
+            } else {
+                currentEndId = id;
+            }
+            
+            suggestions.classList.remove('active');
+            input.setAttribute('aria-expanded', 'false');
+            input.focus();
+        }
+
+        function initMap() {
+            const map = document.getElementById('campus-map');
+            const wrapper = document.getElementById('map-wrapper');
+            const container = document.querySelector('.map-container');
+            
+            wrapper.style.width = map.naturalWidth + 'px';
+            wrapper.style.height = map.naturalHeight + 'px';
+            
+            const overlay = document.getElementById('overlay');
+            overlay.setAttribute('width', map.naturalWidth);
+            overlay.setAttribute('height', map.naturalHeight);
+            overlay.style.width = map.naturalWidth + 'px';
+            overlay.style.height = map.naturalHeight + 'px';
+            
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            gradient.setAttribute('id', 'pathGradient');
+            gradient.setAttribute('x1', '0%');
+            gradient.setAttribute('y1', '0%');
+            gradient.setAttribute('x2', '100%');
+            gradient.setAttribute('y2', '0%');
+            
+            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop1.setAttribute('offset', '0%');
+            stop1.setAttribute('stop-color', '#667eea');
+            
+            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop2.setAttribute('offset', '100%');
+            stop2.setAttribute('stop-color', '#764ba2');
+            
+            gradient.appendChild(stop1);
+            gradient.appendChild(stop2);
+            defs.appendChild(gradient);
+            overlay.appendChild(defs);
+
+            adjustMapToContainer();
+            addDragListeners();
+            window.addEventListener('resize', adjustMapToContainer);
+        }
+
+        function adjustMapToContainer() {
+            const map = document.getElementById('campus-map');
+            const container = document.querySelector('.map-container');
+            const wrapper = document.getElementById('map-wrapper');
+            
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            const mapRatio = map.naturalWidth / map.naturalHeight;
+            const containerRatio = containerWidth / containerHeight;
+            
+            let newScale;
+            if (containerRatio > mapRatio) {
+                newScale = containerHeight / map.naturalHeight;
+            } else {
+                newScale = containerWidth / map.naturalWidth;
+            }
+            
+            newScale = Math.min(newScale, 1);
+            scale = newScale;
+            offsetX = (containerWidth - map.naturalWidth * scale) / 2;
+            offsetY = (containerHeight - map.naturalHeight * scale) / 2;
+            
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function addDragListeners() {
+            const wrapper = document.getElementById('map-wrapper');
+            
+            wrapper.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    offsetX = e.clientX - dragStart.x;
+                    offsetY = e.clientY - dragStart.y;
+                    updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            wrapper.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                const newScale = Math.max(0.2, Math.min(3, scale + delta));
+                
+                const rect = wrapper.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                offsetX = mouseX - (mouseX - offsetX) * (newScale / scale);
+                offsetY = mouseY - (mouseY - offsetY) * (newScale / scale);
+                
+                scale = newScale;
+                updateTransform();
+                updateZoomDisplay();
+            });
+        }
+
+        function zoomIn() {
+            const newScale = Math.min(3, scale + 0.15);
+            const container = document.querySelector('.map-container');
+            const centerX = container.clientWidth / 2;
+            const centerY = container.clientHeight / 2;
+            
+            offsetX = centerX - (centerX - offsetX) * (newScale / scale);
+            offsetY = centerY - (centerY - offsetY) * (newScale / scale);
+            
+            scale = newScale;
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function zoomOut() {
+            const newScale = Math.max(0.2, scale - 0.15);
+            const container = document.querySelector('.map-container');
+            const centerX = container.clientWidth / 2;
+            const centerY = container.clientHeight / 2;
+            
+            offsetX = centerX - (centerX - offsetX) * (newScale / scale);
+            offsetY = centerY - (centerY - offsetY) * (newScale / scale);
+            
+            scale = newScale;
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function resetView() {
+            const map = document.getElementById('campus-map');
+            const container = document.querySelector('.map-container');
+            
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            const mapRatio = map.naturalWidth / map.naturalHeight;
+            const containerRatio = containerWidth / containerHeight;
+            
+            if (containerRatio > mapRatio) {
+                scale = containerHeight / map.naturalHeight;
+            } else {
+                scale = containerWidth / map.naturalWidth;
+            }
+            
+            scale = Math.min(scale, 1);
+            offsetX = (containerWidth - map.naturalWidth * scale) / 2;
+            offsetY = (containerHeight - map.naturalHeight * scale) / 2;
+            
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function updateTransform() {
+            const wrapper = document.getElementById('map-wrapper');
+            wrapper.style.transform = `translate(-50%, -50%) scale(${scale}) translate(${offsetX / scale}px, ${offsetY / scale}px)`;
+        }
+
+        function updateZoomDisplay() {
+            document.getElementById('zoom-value').textContent = Math.round(scale * 100) + '%';
+        }
+
+        function renderPoints() {
+            const container = document.getElementById('map-wrapper');
+            const existingMarkers = container.querySelectorAll('.point-marker');
+            existingMarkers.forEach(m => m.remove());
+            
+            points.forEach(point => {
+                const marker = document.createElement('div');
+                marker.className = 'point-marker normal';
+                marker.style.left = point.px + 'px';
+                marker.style.top = point.py + 'px';
+                marker.dataset.id = point.id;
+                marker.dataset.name = point.name;
+                
+                const label = document.createElement('div');
+                label.className = 'point-label';
+                label.textContent = point.name;
+                marker.appendChild(label);
+                
+                marker.addEventListener('mouseenter', (e) => {
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.textContent = `${point.name} (${getTypeName(point.type)})`;
+                    tooltip.style.left = e.clientX + 15 + 'px';
+                    tooltip.style.top = e.clientY + 15 + 'px';
+                    tooltip.classList.add('visible');
+                });
+                
+                marker.addEventListener('mouseleave', () => {
+                    document.getElementById('tooltip').classList.remove('visible');
+                });
+                
+                marker.addEventListener('click', () => {
+                    const startInput = document.getElementById('start-input');
+                    const endInput = document.getElementById('end-input');
+                    
+                    if (!startInput.value.trim()) {
+                        startInput.value = point.name;
+                        currentStartId = point.id;
+                    } else if (!endInput.value.trim() || endInput.value === startInput.value) {
+                        endInput.value = point.name;
+                        currentEndId = point.id;
+                    }
+                });
+                
+                container.appendChild(marker);
+            });
+        }
+
+        function clearPath() {
+            const overlay = document.getElementById('overlay');
+            const pathElements = overlay.querySelectorAll('.path-line');
+            pathElements.forEach(el => el.remove());
+            
+            const markers = document.querySelectorAll('.point-marker');
+            markers.forEach(marker => {
+                marker.classList.remove('start', 'end');
+                marker.classList.add('normal');
+            });
+            
+            currentPath = [];
+            document.getElementById('path-info').classList.remove('active');
+        }
+
+        function calculatePath() {
+            clearPath();
+            
+            const startInput = document.getElementById('start-input');
+            const endInput = document.getElementById('end-input');
+            
+            if (!currentStartId) {
+                const startPoint = points.find(p => p.name === startInput.value);
+                if (startPoint) {
+                    currentStartId = startPoint.id;
+                } else {
+                    alert('请选择有效的起点！');
+                    return;
+                }
+            }
+            
+            if (!currentEndId) {
+                const endPoint = points.find(p => p.name === endInput.value);
+                if (endPoint) {
+                    currentEndId = endPoint.id;
+                } else {
+                    alert('请选择有效的终点！');
+                    return;
+                }
+            }
+            
+            if (currentStartId === currentEndId) {
+                alert('起点和终点不能相同！');
+                return;
+            }
+            
+            const path = dijkstra(currentStartId, currentEndId);
+            
+            if (!path || path.length === 0) {
+                alert('无法找到路径！');
+                return;
+            }
+            
+            currentPath = path;
+            highlightPath(path);
+            showPathInfo(path);
+        }
+
+        function dijkstra(startId, endId) {
+            const graph = buildGraph();
+            const distances = {};
+            const predecessors = {};
+            const visited = new Set();
+            
+            Object.keys(graph).forEach(node => {
+                distances[node] = Infinity;
+                predecessors[node] = null;
+            });
+            
+            distances[startId] = 0;
+            
+            while (visited.size < Object.keys(graph).length) {
+                let minDist = Infinity;
+                let current = null;
+                
+                Object.keys(graph).forEach(node => {
+                    if (!visited.has(node) && distances[node] < minDist) {
+                        minDist = distances[node];
+                        current = node;
+                    }
+                });
+                
+                if (current === null) break;
+                if (current === endId) break;
+                
+                visited.add(current);
+                
+                graph[current].forEach(edge => {
+                    if (!visited.has(edge.target)) {
+                        const newDist = distances[current] + edge.distance;
+                        if (newDist < distances[edge.target]) {
+                            distances[edge.target] = newDist;
+                            predecessors[edge.target] = { node: current, edge: edge };
+                        }
+                    }
+                });
+            }
+            
+            if (distances[endId] === Infinity) return null;
+            
+            const path = [];
+            let current = endId;
+            
+            while (current !== null) {
+                path.unshift(current);
+                const pred = predecessors[current];
+                current = pred ? pred.node : null;
+            }
+            
+            return path;
+        }
+
+        function buildGraph() {
+            const graph = {};
+            
+            points.forEach(point => {
+                graph[point.id] = [];
+            });
+            
+            paths.forEach(path => {
+                if (!graph[path.start_id]) graph[path.start_id] = [];
+                if (!graph[path.end_id]) graph[path.end_id] = [];
+                
+                graph[path.start_id].push({
+                    target: path.end_id,
+                    distance: path.distance,
+                    direction: path.direction,
+                    target_name: path.end_name
+                });
+                
+                graph[path.end_id].push({
+                    target: path.start_id,
+                    distance: path.distance,
+                    direction: reverseDirection(path.direction),
+                    target_name: path.start_name
+                });
+            });
+            
+            return graph;
+        }
+
+        function reverseDirection(dir) {
+            const directions = {
+                '东': '西', '西': '东', '南': '北', '北': '南',
+                '东南': '西北', '西北': '东南', '东北': '西南', '西南': '东北'
+            };
+            return directions[dir] || dir;
+        }
+
+        function highlightPath(path) {
+            const markers = document.querySelectorAll('.point-marker');
+            
+            markers.forEach(marker => {
+                const index = path.indexOf(marker.dataset.id);
+                if (index === 0) {
+                    marker.classList.remove('normal');
+                    marker.classList.add('start');
+                } else if (index === path.length - 1) {
+                    marker.classList.remove('normal');
+                    marker.classList.add('end');
+                }
+            });
+            
+            drawPathLines(path);
+        }
+
+        function drawPathLines(path) {
+            const overlay = document.getElementById('overlay');
+            
+            let pathD = '';
+            
+            for (let i = 0; i < path.length; i++) {
+                const point = points.find(p => p.id === path[i]);
+                if (point) {
+                    if (i === 0) {
+                        pathD += `M ${point.px} ${point.py}`;
+                    } else {
+                        pathD += ` L ${point.px} ${point.py}`;
+                    }
+                }
+            }
+            
+            const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathElement.setAttribute('d', pathD);
+            pathElement.setAttribute('class', 'path-line path-line-animate');
+            
+            overlay.appendChild(pathElement);
+        }
+
+        function showPathInfo(path) {
+            const detailsDiv = document.getElementById('path-details');
+            const stepsDiv = document.getElementById('path-steps');
+            
+            const pathInfo = getPathInfo(path);
+            
+            detailsDiv.innerHTML = `
+                <strong>总距离：</strong>${pathInfo.totalDistance} 米<br>
+                <strong>途经点：</strong>${path.length - 2} 个<br>
+                <strong>路径长度：</strong>${path.length} 个节点
+            `;
+            
+            let stepsHtml = '';
+            pathInfo.steps.forEach((step, index) => {
+                stepsHtml += `<div class="path-step"><strong>${index + 1}.</strong> ${step}</div>`;
+            });
+            stepsDiv.innerHTML = stepsHtml;
+            
+            document.getElementById('path-info').classList.add('active');
+        }
+
+        function getPathInfo(path) {
+            const graph = buildGraph();
+            let totalDistance = 0;
+            const steps = [];
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const current = path[i];
+                const next = path[i + 1];
+                
+                const currentPoint = points.find(p => p.id === current);
+                const nextPoint = points.find(p => p.id === next);
+                
+                const edge = graph[current].find(e => e.target === next);
+                
+                if (edge) {
+                    totalDistance += edge.distance;
+                    steps.push(`${currentPoint.name} → ${nextPoint.name} (${edge.direction}，${edge.distance}米)`);
+                }
+            }
+            
+            return { totalDistance, steps };
+        }
+
+        document.getElementById('campus-map').addEventListener('load', initMap);
+        loadData();
+    </script>
+</body>
+</html>
