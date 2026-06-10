@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>深圳技术大学校园导航系统</title>
+    <title>深圳技术大学校园导航系统 - 节点与路径数据</title>
     <style>
         * {
             margin: 0;
@@ -31,6 +31,8 @@
             flex-direction: column;
             box-shadow: 2px 0 25px rgba(0,0,0,0.12);
             border-radius: 0 16px 16px 0;
+            z-index: 5;
+            position: relative;
         }
 
         .sidebar h1 {
@@ -298,6 +300,8 @@
             color: #5a6672;
             line-height: 1.8;
             margin-bottom: 12px;
+            white-space: normal;
+            word-break: break-word;
         }
 
         .path-details strong {
@@ -307,6 +311,8 @@
         .path-steps {
             max-height: 220px;
             overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 8px;
         }
 
         .path-step {
@@ -318,6 +324,10 @@
             font-size: 13px;
             color: #34495e;
             transition: transform 0.2s;
+            white-space: normal;
+            word-break: break-word;
+            hyphens: auto;
+            line-height: 1.6;
         }
 
         .path-step:hover {
@@ -399,6 +409,7 @@
             top: 0;
             left: 0;
             pointer-events: none;
+            z-index: 10;
         }
 
         .point-marker {
@@ -644,6 +655,19 @@
             .suggestions {
                 max-height: 200px;
             }
+            
+            .path-info {
+                padding: 14px;
+            }
+            
+            .path-steps {
+                max-height: 150px;
+            }
+            
+            .path-step {
+                font-size: 12px;
+                padding: 8px 10px;
+            }
         }
     </style>
 </head>
@@ -755,17 +779,17 @@
         let debounceTimers = { start: null, end: null };
         let activeInputType = '';
 
-        const POPULAR_LOCATIONS = ['hall_east', 'south_dormitory', 'ai_north', 'lib_north', 'south_canteen'];
+        const POPULAR_LOCATIONS = ['0', '1', '2', '5', '11'];
 
         async function loadData() {
             try {
-                const campusResponse = await fetch('data/campus.csv');
-                const campusText = await campusResponse.text();
-                parseCampusData(campusText);
+                const nodesResponse = await fetch('data/nodes.csv');
+                const nodesText = await nodesResponse.text();
+                parseNodesData(nodesText);
 
-                const pathsResponse = await fetch('data/paths.csv');
-                const pathsText = await pathsResponse.text();
-                parsePathsData(pathsText);
+                const edgesResponse = await fetch('data/edges.csv');
+                const edgesText = await edgesResponse.text();
+                parseEdgesData(edgesText);
 
                 setupSearchInputs();
                 renderPoints();
@@ -777,45 +801,49 @@
             }
         }
 
-        function parseCampusData(text) {
+        function parseNodesData(text) {
             const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('id'));
             points = [];
             lines.forEach(line => {
                 const parts = line.split(',');
-                if (parts.length >= 6) {
+                if (parts.length >= 4) {
                     const id = parts[0].trim();
                     points.push({
                         id: id,
                         name: parts[1].trim(),
                         type: parts[2].trim(),
-                        floor: parseInt(parts[3].trim()),
-                        px: parseInt(parts[4].trim()),
-                        py: parseInt(parts[5].trim()),
+                        px: parseInt(parts[3].trim()),
+                        py: parseInt(parts[4].trim()),
                         isPopular: POPULAR_LOCATIONS.includes(id)
                     });
                 }
             });
-            console.log('加载地点数据:', points.length, '个地点');
+            console.log('加载节点数据:', points.length, '个节点');
         }
 
-        function parsePathsData(text) {
-            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('start_id'));
+        function parseEdgesData(text) {
+            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('from'));
             paths = [];
             lines.forEach(line => {
                 const parts = line.split(',');
-                if (parts.length >= 7) {
+                if (parts.length >= 5) {
+                    const fromId = parts[0].trim();
+                    const toId = parts[1].trim();
+                    const fromNode = points.find(p => p.id === fromId);
+                    const toNode = points.find(p => p.id === toId);
+                    
                     paths.push({
-                        start_id: parts[0].trim(),
-                        end_id: parts[1].trim(),
-                        start_name: parts[2].trim(),
-                        end_name: parts[3].trim(),
-                        distance: parseInt(parts[4].trim()),
-                        direction: parts[5].trim(),
-                        path_type: parts[6].trim()
+                        start_id: fromId,
+                        end_id: toId,
+                        start_name: fromNode ? fromNode.name : fromId,
+                        end_name: toNode ? toNode.name : toId,
+                        distance: parseInt(parts[2].trim()),
+                        direction: parts[4].trim(),
+                        path_type: 'direct'
                     });
                 }
             });
-            console.log('加载路径数据:', paths.length, '条路径');
+            console.log('加载边数据:', paths.length, '条边');
         }
 
         function setupSearchInputs() {
@@ -827,10 +855,10 @@
             setupEnhancedSearchInput(startInput, startSuggestions, 'start');
             setupEnhancedSearchInput(endInput, endSuggestions, 'end');
 
-            startInput.value = '会堂东门';
-            endInput.value = '南区宿舍';
-            currentStartId = 'hall_east';
-            currentEndId = 'south_dormitory';
+            startInput.value = 'E-4留学生宿舍';
+            endInput.value = 'E-0北区食堂';
+            currentStartId = '0';
+            currentEndId = '5';
         }
 
         function debounce(func, delay) {
