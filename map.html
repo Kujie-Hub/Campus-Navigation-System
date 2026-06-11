@@ -497,16 +497,7 @@
             stroke-linejoin: round;
             z-index: 10;
             filter: drop-shadow(0 3px 8px rgba(102, 126, 234, 0.5));
-        }
-
-        .path-line-animate {
-            stroke-dasharray: 1000;
-            stroke-dashoffset: 1000;
-            animation: drawPath 1.2s ease-out forwards;
-        }
-
-        @keyframes drawPath {
-            to { stroke-dashoffset: 0; }
+            vector-effect: non-scaling-stroke;
         }
 
         .nav-controls {
@@ -779,7 +770,7 @@
         let debounceTimers = { start: null, end: null };
         let activeInputType = '';
 
-        const POPULAR_LOCATIONS = ['0', '1', '2', '5', '11'];
+        const POPULAR_LOCATIONS = ['0', '5', '8', '19', '20', '21', '26', '27'];
 
         async function loadData() {
             try {
@@ -855,10 +846,10 @@
             setupEnhancedSearchInput(startInput, startSuggestions, 'start');
             setupEnhancedSearchInput(endInput, endSuggestions, 'end');
 
-            startInput.value = 'E-4留学生宿舍';
-            endInput.value = 'E-0北区食堂';
+            startInput.value = 'E-4';
+            endInput.value = 'D-3中德智能制造学院';
             currentStartId = '0';
-            currentEndId = '5';
+            currentEndId = '26';
         }
 
         function debounce(func, delay) {
@@ -1564,23 +1555,43 @@
             const overlay = document.getElementById('overlay');
             
             let pathD = '';
+            let validPoints = [];
             
             for (let i = 0; i < path.length; i++) {
                 const point = points.find(p => p.id === path[i]);
                 if (point) {
-                    if (i === 0) {
+                    validPoints.push(point);
+                    if (validPoints.length === 1) {
                         pathD += `M ${point.px} ${point.py}`;
                     } else {
                         pathD += ` L ${point.px} ${point.py}`;
                     }
+                } else {
+                    console.warn(`路径节点 ${path[i]} 未找到，已跳过`);
                 }
+            }
+            
+            if (validPoints.length < 2) {
+                console.error('路径点数量不足，无法绘制路径');
+                return;
             }
             
             const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             pathElement.setAttribute('d', pathD);
-            pathElement.setAttribute('class', 'path-line path-line-animate');
+            pathElement.setAttribute('class', 'path-line');
             
             overlay.appendChild(pathElement);
+            
+            requestAnimationFrame(() => {
+                const pathLength = pathElement.getTotalLength();
+                pathElement.style.strokeDasharray = pathLength;
+                pathElement.style.strokeDashoffset = pathLength;
+                pathElement.style.transition = `stroke-dashoffset 1.2s ease-out`;
+                
+                requestAnimationFrame(() => {
+                    pathElement.style.strokeDashoffset = '0';
+                });
+            });
         }
 
         function showPathInfo(path) {
