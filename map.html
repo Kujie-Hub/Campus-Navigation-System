@@ -770,7 +770,7 @@
         let debounceTimers = { start: null, end: null };
         let activeInputType = '';
 
-        const POPULAR_LOCATIONS = ['0', '5', '8', '19', '20', '21', '26', '27'];
+        const POPULAR_LOCATIONS = ['E-4留学生外籍教师综合楼', 'E-0食堂', 'D-2体育馆', 'D-1城市交通与物流学院', 'C-2图书馆', 'C-4会堂', 'D-3中德智能建造学院商学院', 'C-00食堂'];
 
         async function loadData() {
             try {
@@ -793,18 +793,18 @@
         }
 
         function parseNodesData(text) {
-            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('id'));
+            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('id') && !line.startsWith('name') && !line.startsWith('\ufeffid') && !line.startsWith('\ufeffname'));
             points = [];
             lines.forEach(line => {
                 const parts = line.split(',');
-                if (parts.length >= 4) {
+                if (parts.length >= 3) {
                     const id = parts[0].trim();
                     points.push({
                         id: id,
-                        name: parts[1].trim(),
-                        type: parts[2].trim(),
-                        px: parseInt(parts[3].trim()),
-                        py: parseInt(parts[4].trim()),
+                        name: id,
+                        type: inferType(id),
+                        px: parseInt(parts[1].trim()),
+                        py: parseInt(parts[2].trim()),
                         isPopular: POPULAR_LOCATIONS.includes(id)
                     });
                 }
@@ -812,29 +812,64 @@
             console.log('加载节点数据:', points.length, '个节点');
         }
 
+        function inferType(name) {
+            if (name.includes('宿舍')) return 'dormitory';
+            if (name.includes('食堂') || name.includes('餐厅')) return 'canteen';
+            if (name.includes('学院') || name.includes('大学')) return 'college';
+            if (name.includes('体育馆')) return 'gym';
+            if (name.includes('图书馆')) return 'library';
+            if (name.includes('医院')) return 'hospital';
+            if (name.includes('拐点')) return 'intersection';
+            if (name.includes('F')) return 'elevator';
+            if (name.includes('会堂')) return 'hall';
+            if (name.includes('行政')) return 'admin';
+            if (name.includes('服务中心')) return 'service';
+            if (name.includes('酒店')) return 'hotel';
+            if (name.includes('中心')) return 'center';
+            return 'building';
+        }
+
         function parseEdgesData(text) {
-            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('from'));
+            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('source') && !line.startsWith('from'));
             paths = [];
             lines.forEach(line => {
                 const parts = line.split(',');
-                if (parts.length >= 5) {
+                if (parts.length >= 3) {
                     const fromId = parts[0].trim();
                     const toId = parts[1].trim();
                     const fromNode = points.find(p => p.id === fromId);
                     const toNode = points.find(p => p.id === toId);
                     
-                    paths.push({
-                        start_id: fromId,
-                        end_id: toId,
-                        start_name: fromNode ? fromNode.name : fromId,
-                        end_name: toNode ? toNode.name : toId,
-                        distance: parseInt(parts[2].trim()),
-                        direction: parts[4].trim(),
-                        path_type: 'direct'
-                    });
+                    if (fromNode && toNode) {
+                        paths.push({
+                            start_id: fromId,
+                            end_id: toId,
+                            start_name: fromNode.name,
+                            end_name: toNode.name,
+                            distance: parseFloat(parts[2].trim()),
+                            direction: calculateDirection(fromNode, toNode),
+                            path_type: 'direct'
+                        });
+                    }
                 }
             });
             console.log('加载边数据:', paths.length, '条边');
+        }
+
+        function calculateDirection(from, to) {
+            const dx = to.px - from.px;
+            const dy = to.py - from.py;
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            if (angle >= -22.5 && angle < 22.5) return '东';
+            if (angle >= 22.5 && angle < 67.5) return '东南';
+            if (angle >= 67.5 && angle < 112.5) return '南';
+            if (angle >= 112.5 && angle < 157.5) return '西南';
+            if (angle >= 157.5 || angle < -157.5) return '西';
+            if (angle >= -157.5 && angle < -112.5) return '西北';
+            if (angle >= -112.5 && angle < -67.5) return '北';
+            if (angle >= -67.5 && angle < -22.5) return '东北';
+            return '未知';
         }
 
         function setupSearchInputs() {
@@ -846,10 +881,10 @@
             setupEnhancedSearchInput(startInput, startSuggestions, 'start');
             setupEnhancedSearchInput(endInput, endSuggestions, 'end');
 
-            startInput.value = 'E-4';
-            endInput.value = 'D-3中德智能制造学院';
-            currentStartId = '0';
-            currentEndId = '26';
+            startInput.value = 'E-4留学生外籍教师综合楼';
+            endInput.value = 'D-3中德智能建造学院商学院';
+            currentStartId = 'E-4留学生外籍教师综合楼';
+            currentEndId = 'D-3中德智能建造学院商学院';
         }
 
         function debounce(func, delay) {
@@ -1103,7 +1138,7 @@
                     score += 20;
                 }
                 
-                const typeOrder = ['college', 'entrance', 'library', 'canteen', 'dormitory', 'playground', 'stair', 'intersection'];
+                const typeOrder = ['college', 'entrance', 'library', 'canteen', 'dormitory', 'playground', 'gym', 'stadium', 'hospital', 'hall', 'admin', 'service', 'hotel', 'center', 'stair', 'intersection', 'elevator'];
                 const typeIndex = typeOrder.indexOf(point.type);
                 if (typeIndex !== -1) {
                     score += (typeOrder.length - typeIndex) * 5;
@@ -1135,7 +1170,16 @@
                 'canteen': '🍽️',
                 'dormitory': '🏠',
                 'library': '📚',
-                'building': '🏢'
+                'building': '🏢',
+                'gym': '🏋️',
+                'hospital': '🏥',
+                'elevator': '🛗',
+                'hall': '🎭',
+                'admin': '🏛️',
+                'service': '🛎️',
+                'hotel': '🏨',
+                'center': '🏢',
+                'stadium': '🏟️'
             };
             return icons[type] || '📍';
         }
@@ -1150,7 +1194,16 @@
                 'canteen': '食堂',
                 'dormitory': '宿舍',
                 'library': '图书馆',
-                'building': '建筑'
+                'building': '建筑',
+                'gym': '体育馆',
+                'hospital': '医院',
+                'elevator': '电梯',
+                'hall': '会堂',
+                'admin': '行政楼',
+                'service': '服务中心',
+                'hotel': '酒店',
+                'center': '中心',
+                'stadium': '体育场'
             };
             return names[type] || type;
         }
@@ -1631,11 +1684,13 @@
                 
                 if (edge) {
                     totalDistance += edge.distance;
-                    steps.push(`${currentPoint.name} → ${nextPoint.name} (${edge.direction}，${edge.distance}米)`);
+                    const distStr = edge.distance % 1 === 0 ? edge.distance : edge.distance.toFixed(2);
+                    steps.push(`${currentPoint.name} → ${nextPoint.name} (${edge.direction}，${distStr}米)`);
                 }
             }
             
-            return { totalDistance, steps };
+            const totalDistStr = totalDistance % 1 === 0 ? totalDistance : totalDistance.toFixed(2);
+            return { totalDistance: totalDistStr, steps };
         }
 
         document.getElementById('campus-map').addEventListener('load', initMap);
