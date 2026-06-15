@@ -2,190 +2,238 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <iostream>
 
-bool PathPlanner::loadCampusData(const std::string& campus_file) {
-    std::ifstream file(campus_file);
-    if (!file.is_open()) {
+std::unordered_map<std::string, Point>& PathPlanner::getPointsByFloor(int floor) {
+    return floor == 1 ? points_floor1 : points_floor2;
+}
+
+std::unordered_map<std::string, std::vector<Edge>>& PathPlanner::getAdjByFloor(int floor) {
+    return floor == 1 ? adj_floor1 : adj_floor2;
+}
+
+bool PathPlanner::loadFloor1Data(const std::string& nodes_file, const std::string& edges_file) {
+    // 加载节点数据
+    std::ifstream node_file(nodes_file);
+    if (!node_file.is_open()) {
+        std::cerr << "无法打开节点文件: " << nodes_file << std::endl;
         return false;
     }
     
     std::string line;
-    std::getline(file, line);
+    std::getline(node_file, line); // 跳过表头
     
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string id, name, type, floor_str, px_str, py_str;
+    while (std::getline(node_file, line)) {
+        if (line.empty()) continue;
         
-        std::getline(ss, id, ',');
+        std::stringstream ss(line);
+        std::string name, x_str, y_str, isfloor_str;
+        
         std::getline(ss, name, ',');
-        std::getline(ss, type, ',');
-        std::getline(ss, floor_str, ',');
-        std::getline(ss, px_str, ',');
-        std::getline(ss, py_str, ',');
+        std::getline(ss, x_str, ',');
+        std::getline(ss, y_str, ',');
+        std::getline(ss, isfloor_str, ',');
         
-        int floor = std::stoi(floor_str);
-        int px = std::stoi(px_str);
-        int py = std::stoi(py_str);
-        
-        points[id] = Point(id, name, type, floor, px, py);
+        try {
+            int x = std::stoi(x_str);
+            int y = std::stoi(y_str);
+            int isfloor = std::stoi(isfloor_str);
+            
+            points_floor1[name] = Point(name, name, 1, x, y, isfloor);
+        } catch (const std::exception& e) {
+            std::cerr << "解析节点数据错误: " << line << std::endl;
+        }
+    }
+    node_file.close();
+    
+    // 加载边数据
+    std::ifstream edge_file(edges_file);
+    if (!edge_file.is_open()) {
+        std::cerr << "无法打开边文件: " << edges_file << std::endl;
+        return false;
     }
     
-    file.close();
+    std::getline(edge_file, line); // 跳过表头
+    
+    while (std::getline(edge_file, line)) {
+        if (line.empty()) continue;
+        
+        std::stringstream ss(line);
+        std::string from, to, dist_str;
+        
+        std::getline(ss, from, ',');
+        std::getline(ss, to, ',');
+        std::getline(ss, dist_str, ',');
+        
+        try {
+            double distance = std::stod(dist_str);
+            
+            // 计算方向
+            std::string direction = "";
+            auto it_from = points_floor1.find(from);
+            auto it_to = points_floor1.find(to);
+            
+            if (it_from != points_floor1.end() && it_to != points_floor1.end()) {
+                int dx = it_to->second.px - it_from->second.px;
+                int dy = it_to->second.py - it_from->second.py;
+                
+                if (std::abs(dx) > std::abs(dy)) {
+                    direction = dx > 0 ? "东" : "西";
+                } else {
+                    direction = dy > 0 ? "南" : "北";
+                }
+            }
+            
+            // 添加到邻接表（双向）
+            adj_floor1[from].emplace_back(to, 1, distance, direction);
+            adj_floor1[to].emplace_back(from, 1, distance, direction == "" ? "" : (direction == "东" ? "西" : direction == "西" ? "东" : direction == "南" ? "北" : "南"));
+        } catch (const std::exception& e) {
+            std::cerr << "解析边数据错误: " << line << std::endl;
+        }
+    }
+    edge_file.close();
+    
     return true;
 }
 
-bool PathPlanner::loadPathsData(const std::string& paths_file) {
-    std::ifstream file(paths_file);
-    if (!file.is_open()) {
+bool PathPlanner::loadFloor2Data(const std::string& nodes_file, const std::string& edges_file) {
+    // 加载节点数据
+    std::ifstream node_file(nodes_file);
+    if (!node_file.is_open()) {
+        std::cerr << "无法打开节点文件: " << nodes_file << std::endl;
         return false;
     }
     
     std::string line;
-    std::getline(file, line);
+    std::getline(node_file, line); // 跳过表头
     
-    while (std::getline(file, line)) {
+    while (std::getline(node_file, line)) {
+        if (line.empty()) continue;
+        
         std::stringstream ss(line);
-        std::string start_id, end_id, start_name, end_name, distance_str, direction, path_type;
+        std::string name, x_str, y_str, isfloor_str;
         
-        std::getline(ss, start_id, ',');
-        std::getline(ss, end_id, ',');
-        std::getline(ss, start_name, ',');
-        std::getline(ss, end_name, ',');
-        std::getline(ss, distance_str, ',');
-        std::getline(ss, direction, ',');
-        std::getline(ss, path_type, ',');
+        std::getline(ss, name, ',');
+        std::getline(ss, x_str, ',');
+        std::getline(ss, y_str, ',');
+        std::getline(ss, isfloor_str, ',');
         
-        int distance = std::stoi(distance_str);
-        
-        adjacency_list[start_id].emplace_back(end_id, end_name, distance, direction);
-        adjacency_list[end_id].emplace_back(start_id, start_name, distance, direction);
+        try {
+            int x = std::stoi(x_str);
+            int y = std::stoi(y_str);
+            int isfloor = std::stoi(isfloor_str);
+            
+            points_floor2[name] = Point(name, name, 2, x, y, isfloor);
+        } catch (const std::exception& e) {
+            std::cerr << "解析节点数据错误: " << line << std::endl;
+        }
+    }
+    node_file.close();
+    
+    // 加载边数据
+    std::ifstream edge_file(edges_file);
+    if (!edge_file.is_open()) {
+        std::cerr << "无法打开边文件: " << edges_file << std::endl;
+        return false;
     }
     
-    file.close();
+    std::getline(edge_file, line); // 跳过表头
+    
+    while (std::getline(edge_file, line)) {
+        if (line.empty()) continue;
+        
+        std::stringstream ss(line);
+        std::string from, to, dist_str;
+        
+        std::getline(ss, from, ',');
+        std::getline(ss, to, ',');
+        std::getline(ss, dist_str, ',');
+        
+        try {
+            double distance = std::stod(dist_str);
+            
+            // 计算方向
+            std::string direction = "";
+            auto it_from = points_floor2.find(from);
+            auto it_to = points_floor2.find(to);
+            
+            if (it_from != points_floor2.end() && it_to != points_floor2.end()) {
+                int dx = it_to->second.px - it_from->second.px;
+                int dy = it_to->second.py - it_from->second.py;
+                
+                if (std::abs(dx) > std::abs(dy)) {
+                    direction = dx > 0 ? "东" : "西";
+                } else {
+                    direction = dy > 0 ? "南" : "北";
+                }
+            }
+            
+            // 添加到邻接表（双向）
+            adj_floor2[from].emplace_back(to, 2, distance, direction);
+            adj_floor2[to].emplace_back(from, 2, distance, direction == "" ? "" : (direction == "东" ? "西" : direction == "西" ? "东" : direction == "南" ? "北" : "南"));
+        } catch (const std::exception& e) {
+            std::cerr << "解析边数据错误: " << line << std::endl;
+        }
+    }
+    edge_file.close();
+    
     return true;
 }
 
-std::vector<std::string> PathPlanner::findShortestPath(const std::string& start_id, const std::string& end_id) {
-    if (points.find(start_id) == points.end() || points.find(end_id) == points.end()) {
-        return {};
+bool PathPlanner::loadVirtualConnections(const std::string& virtical_file) {
+    std::ifstream file(virtical_file);
+    if (!file.is_open()) {
+        std::cerr << "无法打开虚拟连接文件: " << virtical_file << std::endl;
+        return false;
     }
     
-    std::unordered_map<std::string, int> distances;
-    std::unordered_map<std::string, std::string> predecessors;
-    std::priority_queue<std::pair<int, std::string>, 
-                        std::vector<std::pair<int, std::string>>, 
-                        std::greater<std::pair<int, std::string>>> pq;
+    std::string line;
+    std::getline(file, line); // 跳过表头
     
-    for (const auto& pair : points) {
-        distances[pair.first] = std::numeric_limits<int>::max();
-        predecessors[pair.first] = "";
-    }
-    
-    distances[start_id] = 0;
-    pq.push({0, start_id});
-    
-    while (!pq.empty()) {
-        auto current = pq.top();
-        pq.pop();
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
         
-        int current_dist = current.first;
-        std::string current_id = current.second;
+        std::stringstream ss(line);
+        std::string from, to, dist_str;
         
-        if (current_id == end_id) {
-            break;
-        }
+        std::getline(ss, from, ',');
+        std::getline(ss, to, ',');
+        std::getline(ss, dist_str, ',');
         
-        if (current_dist > distances[current_id]) {
-            continue;
-        }
-        
-        for (const Edge& edge : adjacency_list[current_id]) {
-            int new_dist = current_dist + edge.distance;
-            if (new_dist < distances[edge.target_id]) {
-                distances[edge.target_id] = new_dist;
-                predecessors[edge.target_id] = current_id;
-                pq.push({new_dist, edge.target_id});
-            }
+        // from 和 to 是同一个节点名称，表示这是一个跨楼层入口
+        // 将其存储为 from -> from 的连接，表示该节点可以转换楼层
+        if (!from.empty()) {
+            // 添加到一楼和二楼的邻接表
+            double distance = 5.0; // 默认跨楼层距离
+            try {
+                distance = std::stod(dist_str);
+            } catch (...) {}
+            
+            // 一楼连接：from -> from (虚拟)
+            adj_floor1[from].emplace_back(from, 2, distance, "上楼");
+            
+            // 二楼连接：from -> from (虚拟)
+            adj_floor2[from].emplace_back(from, 1, distance, "下楼");
+            
+            // 存储跨楼层连接映射
+            floor_connections[from] = from;
         }
     }
+    file.close();
     
-    std::vector<std::string> path;
-    std::string current = end_id;
-    
-    while (!current.empty()) {
-        path.push_back(current);
-        current = predecessors[current];
-        if (current == end_id) break;
-    }
-    
-    std::reverse(path.begin(), path.end());
-    
-    if (path.empty() || path[0] != start_id) {
-        return {};
-    }
-    
-    return path;
+    return true;
 }
 
-std::vector<std::string> PathPlanner::findShortestPathByName(const std::string& start_name, const std::string& end_name) {
-    std::string start_id = findIdByName(start_name);
-    std::string end_id = findIdByName(end_name);
-    
-    if (start_id.empty() || end_id.empty()) {
-        return {};
-    }
-    
-    return findShortestPath(start_id, end_id);
+bool PathPlanner::loadAllData() {
+    bool result = true;
+    result &= loadFloor1Data("data/nodes1.csv", "data/edges1.csv");
+    result &= loadFloor2Data("data/nodes2.csv", "data/edges2.csv");
+    result &= loadVirtualConnections("data/virtical.csv");
+    return result;
 }
 
-int PathPlanner::getPathDistance(const std::vector<std::string>& path) {
-    if (path.size() < 2) {
-        return 0;
-    }
-    
-    int total_distance = 0;
-    
-    for (size_t i = 0; i < path.size() - 1; ++i) {
-        const std::string& current = path[i];
-        const std::string& next = path[i + 1];
-        
-        for (const Edge& edge : adjacency_list[current]) {
-            if (edge.target_id == next) {
-                total_distance += edge.distance;
-                break;
-            }
-        }
-    }
-    
-    return total_distance;
-}
-
-std::vector<std::pair<std::string, std::string>> PathPlanner::getPathDirections(const std::vector<std::string>& path) {
-    std::vector<std::pair<std::string, std::string>> directions;
-    
-    if (path.size() < 2) {
-        return directions;
-    }
-    
-    for (size_t i = 0; i < path.size() - 1; ++i) {
-        const std::string& current = path[i];
-        const std::string& next = path[i + 1];
-        
-        for (const Edge& edge : adjacency_list[current]) {
-            if (edge.target_id == next) {
-                std::string from_name = points[current].name;
-                std::string to_name = edge.target_name;
-                std::string dir_info = from_name + " -> " + to_name + " (" + edge.direction + ", " + std::to_string(edge.distance) + "米)";
-                directions.emplace_back(edge.direction, dir_info);
-                break;
-            }
-        }
-    }
-    
-    return directions;
-}
-
-Point PathPlanner::getPoint(const std::string& id) const {
+Point PathPlanner::getPoint(const std::string& id, int floor) {
+    auto& points = getPointsByFloor(floor);
     auto it = points.find(id);
     if (it != points.end()) {
         return it->second;
@@ -193,27 +241,209 @@ Point PathPlanner::getPoint(const std::string& id) const {
     return Point();
 }
 
-std::vector<std::string> PathPlanner::getAllPointIds() const {
+bool PathPlanner::findPointByName(const std::string& name, std::string& out_id, int& out_floor) {
+    // 先在一楼查找
+    auto it1 = points_floor1.find(name);
+    if (it1 != points_floor1.end()) {
+        out_id = name;
+        out_floor = 1;
+        return true;
+    }
+    
+    // 在二楼查找
+    auto it2 = points_floor2.find(name);
+    if (it2 != points_floor2.end()) {
+        out_id = name;
+        out_floor = 2;
+        return true;
+    }
+    
+    return false;
+}
+
+std::vector<std::string> PathPlanner::getPointIdsByFloor(int floor) {
     std::vector<std::string> ids;
+    auto& points = getPointsByFloor(floor);
     for (const auto& pair : points) {
         ids.push_back(pair.first);
     }
     return ids;
 }
 
-std::vector<std::string> PathPlanner::getAllPointNames() const {
-    std::vector<std::string> names;
-    for (const auto& pair : points) {
-        names.push_back(pair.second.name);
-    }
-    return names;
+std::vector<std::string> PathPlanner::getPointNamesByFloor(int floor) {
+    return getPointIdsByFloor(floor);
 }
 
-std::string PathPlanner::findIdByName(const std::string& name) const {
-    for (const auto& pair : points) {
-        if (pair.second.name == name) {
-            return pair.first;
+std::vector<PathSegment> PathPlanner::findShortestPath(const std::string& start_id, int start_floor, const std::string& end_id) {
+    std::vector<PathSegment> result;
+    
+    // 状态定义：(节点ID, 当前楼层)
+    using State = std::pair<std::string, int>;
+    
+    struct PQItem {
+        double dist;
+        State state;
+        std::vector<PathSegment> path;
+        
+        bool operator>(const PQItem& other) const {
+            return dist > other.dist;
+        }
+    };
+    
+    std::priority_queue<PQItem, std::vector<PQItem>, std::greater<PQItem>> pq;
+    
+    // 初始化：起点在指定楼层
+    pq.push({0, {start_id, start_floor}, {}});
+    
+    std::unordered_map<std::string, double> best_cost[3]; // 分别用于一楼、二楼
+    best_cost[1][start_id] = 0;
+    best_cost[2][start_id] = 0;
+    
+    while (!pq.empty()) {
+        PQItem current = pq.top();
+        pq.pop();
+        
+        std::string current_id = current.state.first;
+        int current_floor = current.state.second;
+        
+        // 检查是否到达终点（在任意楼层）
+        if (current_id == end_id) {
+            return current.path;
+        }
+        
+        // 跳过已处理的更优路径
+        if (current.dist > best_cost[current_floor][current_id]) {
+            continue;
+        }
+        
+        // 获取当前楼层的邻接表
+        auto& adj = getAdjByFloor(current_floor);
+        auto it_adj = adj.find(current_id);
+        
+        if (it_adj != adj.end()) {
+            for (const Edge& edge : it_adj->second) {
+                std::string next_id = edge.target_id;
+                int next_floor = edge.target_floor;
+                
+                // 检查目标节点是否存在
+                auto& target_points = getPointsByFloor(next_floor);
+                if (target_points.find(next_id) == target_points.end() && next_id != current_id) {
+                    continue;
+                }
+                
+                double new_cost = current.dist + edge.distance;
+                
+                // 检查是否更优
+                if (new_cost < best_cost[next_floor][next_id]) {
+                    best_cost[next_floor][next_id] = new_cost;
+                    
+                    // 创建路径段
+                    std::vector<PathSegment> new_path = current.path;
+                    new_path.emplace_back(current_id, next_id, edge.distance, current_floor, next_floor, edge.direction);
+                    
+                    pq.push({new_cost, {next_id, next_floor}, new_path});
+                }
+            }
         }
     }
-    return "";
+    
+    return result; // 空路径表示无法到达
+}
+
+std::vector<PathSegment> PathPlanner::findShortestPathByName(const std::string& start_name, int start_floor, const std::string& end_name) {
+    // 查找起点
+    std::string start_id;
+    int actual_start_floor;
+    if (!findPointByName(start_name, start_id, actual_start_floor)) {
+        return {};
+    }
+    
+    // 如果用户指定了起始楼层，使用指定楼层
+    if (start_floor != 0) {
+        actual_start_floor = start_floor;
+    }
+    
+    // 查找终点（在两个楼层都查找）
+    std::string end_id = "";
+    auto it1 = points_floor1.find(end_name);
+    auto it2 = points_floor2.find(end_name);
+    
+    if (it1 != points_floor1.end()) {
+        end_id = end_name;
+    } else if (it2 != points_floor2.end()) {
+        end_id = end_name;
+    } else {
+        return {};
+    }
+    
+    // 在指定起始楼层搜索
+    return findShortestPath(start_id, actual_start_floor, end_id);
+}
+
+double PathPlanner::getPathDistance(const std::vector<PathSegment>& path) {
+    double total = 0;
+    for (const auto& seg : path) {
+        total += seg.distance;
+    }
+    return total;
+}
+
+std::string PathPlanner::getPathInfo(const std::vector<PathSegment>& path) {
+    if (path.empty()) {
+        return "无法找到路径";
+    }
+    
+    std::stringstream ss;
+    ss << "===== 路径规划结果 =====" << std::endl;
+    ss << "总距离: " << getPathDistance(path) << " 米" << std::endl;
+    ss << "=======================" << std::endl;
+    
+    std::string current_id = path[0].from_id;
+    int current_floor = path[0].from_floor;
+    
+    ss << "起点: " << current_id << " (";
+    ss << (current_floor == 1 ? "一楼" : "二楼") << ")" << std::endl;
+    
+    for (size_t i = 0; i < path.size(); ++i) {
+        const auto& seg = path[i];
+        
+        // 检测楼层变化
+        if (seg.from_floor != seg.to_floor) {
+            ss << "  -> [跨楼层] " << (seg.to_floor == 2 ? "上楼" : "下楼") 
+               << " " << seg.distance << "米" << std::endl;
+        }
+        
+        ss << "  " << (i + 1) << ". " << seg.from_id 
+           << " -> " << seg.to_id 
+           << " (" << seg.distance << "米, " << seg.direction << ")" << std::endl;
+        
+        current_id = seg.to_id;
+        current_floor = seg.to_floor;
+    }
+    
+    ss << "终点: " << current_id << " (";
+    ss << (current_floor == 1 ? "一楼" : "二楼") << ")" << std::endl;
+    
+    // 路径详情
+    ss << std::endl << "===== 导航指引 =====" << std::endl;
+    for (size_t i = 0; i < path.size(); ++i) {
+        const auto& seg = path[i];
+        ss << (i + 1) << ". 从 " << seg.from_id;
+        if (seg.from_floor != seg.to_floor) {
+            ss << " " << (seg.to_floor == 2 ? "上楼" : "下楼");
+        }
+        ss << " 前往 " << seg.to_id 
+           << "，方向: " << seg.direction 
+           << "，距离: " << seg.distance << "米" << std::endl;
+    }
+    
+    return ss.str();
+}
+
+std::vector<std::pair<std::string, std::string>> PathPlanner::getFloorConnections() {
+    std::vector<std::pair<std::string, std::string>> connections;
+    for (const auto& pair : floor_connections) {
+        connections.emplace_back(pair.first, pair.first);
+    }
+    return connections;
 }

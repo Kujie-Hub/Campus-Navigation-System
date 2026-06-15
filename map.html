@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>深圳技术大学校园导航系统 - 节点与路径数据</title>
+    <title>深圳技术大学校园导航系统 - 跨楼层导航</title>
     <style>
         * {
             margin: 0;
@@ -24,7 +24,7 @@
         }
 
         .sidebar {
-            width: 360px;
+            width: 380px;
             background: rgba(255, 255, 255, 0.98);
             padding: 24px;
             display: flex;
@@ -33,12 +33,13 @@
             border-radius: 0 16px 16px 0;
             z-index: 5;
             position: relative;
+            overflow-y: auto;
         }
 
         .sidebar h1 {
             color: #2c3e50;
             font-size: 20px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             padding-bottom: 16px;
             border-bottom: 2px solid #667eea;
             display: flex;
@@ -46,13 +47,59 @@
             gap: 10px;
         }
 
-        .form-group {
+        .floor-selector {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .floor-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e8ecef;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .floor-btn:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .floor-btn.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .floor-btn .floor-num {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .floor-btn .floor-desc {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #34495e;
             font-weight: 600;
             font-size: 14px;
@@ -111,31 +158,12 @@
         }
 
         @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .suggestions.active {
             display: block;
-        }
-
-        .suggestions:empty {
-            display: none;
-        }
-
-        .suggestions.loading::before {
-            content: '';
-            display: block;
-            padding: 12px;
-            text-align: center;
-            color: #667eea;
-            font-size: 14px;
         }
 
         .suggestion-header {
@@ -170,11 +198,6 @@
             color: #3498db;
         }
 
-        .suggestion-item.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
         .suggestion-item .icon {
             width: 32px;
             height: 32px;
@@ -185,10 +208,6 @@
             justify-content: center;
             font-size: 14px;
             flex-shrink: 0;
-        }
-
-        .suggestion-item.active .icon {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
         }
 
         .suggestion-item .content {
@@ -205,40 +224,27 @@
             text-overflow: ellipsis;
         }
 
-        .suggestion-item.active .title {
-            color: #2980b9;
-        }
-
         .suggestion-item .subtitle {
             font-size: 12px;
             color: #95a5a6;
             margin-top: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
-        .suggestion-item .distance {
-            font-size: 12px;
-            color: #667eea;
+        .suggestion-item .floor-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
             font-weight: 500;
-            padding: 4px 8px;
-            background: rgba(102, 126, 234, 0.1);
-            border-radius: 12px;
-            flex-shrink: 0;
         }
 
-        .suggestions-empty {
-            padding: 20px;
-            text-align: center;
-            color: #95a5a6;
-            font-size: 14px;
+        .floor-tag.floor-1 {
+            background: rgba(0, 255, 127, 0.2);
+            color: #00a86b;
         }
 
-        .suggestions-empty .icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-            opacity: 0.5;
+        .floor-tag.floor-2 {
+            background: rgba(135, 206, 235, 0.3);
+            color: #4a90a4;
         }
 
         .btn {
@@ -256,6 +262,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            margin-top: 8px;
         }
 
         .btn:hover {
@@ -268,8 +275,8 @@
         }
 
         .path-info {
-            margin-top: 20px;
-            padding: 18px;
+            margin-top: 16px;
+            padding: 16px;
             background: #f8f9fa;
             border-radius: 12px;
             display: none;
@@ -300,8 +307,6 @@
             color: #5a6672;
             line-height: 1.8;
             margin-bottom: 12px;
-            white-space: normal;
-            word-break: break-word;
         }
 
         .path-details strong {
@@ -309,9 +314,8 @@
         }
 
         .path-steps {
-            max-height: 220px;
+            max-height: 200px;
             overflow-y: auto;
-            overflow-x: hidden;
             padding-right: 8px;
         }
 
@@ -324,10 +328,22 @@
             font-size: 13px;
             color: #34495e;
             transition: transform 0.2s;
-            white-space: normal;
-            word-break: break-word;
-            hyphens: auto;
-            line-height: 1.6;
+            line-height: 1.5;
+        }
+
+        .path-step.floor-1 {
+            border-left-color: #00FF7F;
+            background: rgba(0, 255, 127, 0.05);
+        }
+
+        .path-step.floor-2 {
+            border-left-color: #87CEEB;
+            background: rgba(135, 206, 235, 0.1);
+        }
+
+        .path-step.cross-floor {
+            border-left-color: #FF6B6B;
+            background: rgba(255, 107, 107, 0.1);
         }
 
         .path-step:hover {
@@ -336,7 +352,7 @@
 
         .legend {
             margin-top: auto;
-            padding-top: 20px;
+            padding-top: 16px;
             border-top: 1px solid #e9ecef;
         }
 
@@ -349,7 +365,7 @@
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-size: 13px;
             color: #6b7280;
         }
@@ -362,24 +378,40 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        .legend-color.start { 
-            background: #10b981; 
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(16, 185, 129, 0.4);
+        .legend-color.start {
+            background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
         }
-        .legend-color.end { 
-            background: #ef4444; 
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(239, 68, 68, 0.4);
+
+        .legend-color.end {
+            background: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
         }
-        .legend-color.point { 
-            background: #3b82f6; 
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(59, 130, 246, 0.4);
+
+        .legend-color.point {
+            background: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
         }
-        .legend-color.path { 
-            border-radius: 4px; 
-            width: 45px; 
-            height: 5px; 
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+
+        .legend-color.path-1 {
+            border-radius: 4px;
+            width: 45px;
+            height: 5px;
+            background: #00FF7F;
             box-shadow: none;
+        }
+
+        .legend-color.path-2 {
+            border-radius: 4px;
+            width: 45px;
+            height: 5px;
+            background: #87CEEB;
+            box-shadow: none;
+        }
+
+        .legend-color.stair {
+            background: #FF6B6B;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.3);
         }
 
         .map-container {
@@ -456,28 +488,41 @@
         }
 
         .point-marker.normal {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             background: #3b82f6;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 2px 12px rgba(59, 130, 246, 0.45);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 10px rgba(59, 130, 246, 0.4);
         }
 
-        .point-marker.normal:hover {
-            background: #2563eb;
+        .point-marker.floor-1 {
+            background: #00FF7F;
+            box-shadow: 0 0 0 3px rgba(0, 255, 127, 0.3), 0 2px 10px rgba(0, 255, 127, 0.4);
+        }
+
+        .point-marker.floor-2 {
+            background: #87CEEB;
+            box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.3), 0 2px 10px rgba(135, 206, 235, 0.4);
+        }
+
+        .point-marker.stair {
+            width: 20px;
+            height: 20px;
+            background: #FF6B6B;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.3), 0 2px 10px rgba(255, 107, 107, 0.4);
         }
 
         .point-label {
             position: absolute;
             white-space: nowrap;
-            font-size: 12px;
+            font-size: 11px;
             background: rgba(0,0,0,0.85);
             color: white;
-            padding: 5px 10px;
-            border-radius: 6px;
+            padding: 4px 8px;
+            border-radius: 5px;
             top: 100%;
             left: 50%;
             transform: translateX(-50%);
-            margin-top: 8px;
+            margin-top: 6px;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s;
@@ -490,14 +535,26 @@
         }
 
         .path-line {
-            stroke: url(#pathGradient);
             stroke-width: 5;
             fill: none;
             stroke-linecap: round;
             stroke-linejoin: round;
             z-index: 10;
-            filter: drop-shadow(0 3px 8px rgba(102, 126, 234, 0.5));
+            filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
             vector-effect: non-scaling-stroke;
+        }
+
+        .path-line.floor-1 {
+            stroke: #00FF7F;
+        }
+
+        .path-line.floor-2 {
+            stroke: #87CEEB;
+        }
+
+        .path-line.cross-floor {
+            stroke: #FF6B6B;
+            stroke-dasharray: 10, 5;
         }
 
         .nav-controls {
@@ -528,10 +585,6 @@
             transform: translateY(-3px);
             box-shadow: 0 5px 20px rgba(0,0,0,0.18);
             background: white;
-        }
-
-        .nav-btn:active {
-            transform: translateY(-1px);
         }
 
         .zoom-value {
@@ -602,15 +655,34 @@
             font-size: 14px;
         }
 
-        .sr-only {
+        .floor-indicator {
             position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.12);
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .floor-indicator .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .floor-indicator .dot.floor-1 {
+            background: #00FF7F;
+        }
+
+        .floor-indicator .dot.floor-2 {
+            background: #87CEEB;
         }
 
         @media (max-width: 768px) {
@@ -627,37 +699,9 @@
                 overflow-y: auto;
             }
             
-            .sidebar h1 {
-                font-size: 18px;
-                margin-bottom: 16px;
-            }
-            
             .nav-controls {
                 bottom: 16px;
                 right: 16px;
-            }
-            
-            .nav-btn {
-                width: 42px;
-                height: 42px;
-                font-size: 18px;
-            }
-            
-            .suggestions {
-                max-height: 200px;
-            }
-            
-            .path-info {
-                padding: 14px;
-            }
-            
-            .path-steps {
-                max-height: 150px;
-            }
-            
-            .path-step {
-                font-size: 12px;
-                padding: 8px 10px;
             }
         }
     </style>
@@ -665,12 +709,27 @@
 <body>
     <div class="loading" id="loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">加载数据中...</div>
+        <div class="loading-text">加载跨楼层导航数据...</div>
     </div>
 
     <div class="container">
         <div class="sidebar">
             <h1>🏫 校园导航系统</h1>
+            
+            <div class="floor-selector">
+                <button class="floor-btn active" data-floor="1" onclick="selectFloor(1)">
+                    <span class="floor-num">1F</span>
+                    <span class="floor-desc">一楼</span>
+                </button>
+                <button class="floor-btn" data-floor="2" onclick="selectFloor(2)">
+                    <span class="floor-num">2F</span>
+                    <span class="floor-desc">二楼</span>
+                </button>
+                <button class="floor-btn" data-floor="0" onclick="selectFloor(0)">
+                    <span class="floor-num">ALL</span>
+                    <span class="floor-desc">跨楼层</span>
+                </button>
+            </div>
             
             <div class="form-group">
                 <label for="start-input">📍 起点</label>
@@ -680,20 +739,9 @@
                         id="start-input" 
                         placeholder="输入起点名称..." 
                         autocomplete="off"
-                        aria-autocomplete="list"
-                        aria-haspopup="true"
-                        aria-expanded="false"
-                        role="combobox"
-                        aria-controls="start-suggestions"
                     >
-                    <span class="search-icon" role="img" aria-label="搜索">🔍</span>
-                    <div 
-                        class="suggestions" 
-                        id="start-suggestions"
-                        role="listbox"
-                        aria-label="起点搜索建议"
-                        aria-live="polite"
-                    ></div>
+                    <span class="search-icon">🔍</span>
+                    <div class="suggestions" id="start-suggestions"></div>
                 </div>
             </div>
             
@@ -705,20 +753,9 @@
                         id="end-input" 
                         placeholder="输入终点名称..." 
                         autocomplete="off"
-                        aria-autocomplete="list"
-                        aria-haspopup="true"
-                        aria-expanded="false"
-                        role="combobox"
-                        aria-controls="end-suggestions"
                     >
-                    <span class="search-icon" role="img" aria-label="搜索">🔍</span>
-                    <div 
-                        class="suggestions" 
-                        id="end-suggestions"
-                        role="listbox"
-                        aria-label="终点搜索建议"
-                        aria-live="polite"
-                    ></div>
+                    <span class="search-icon">🔍</span>
+                    <div class="suggestions" id="end-suggestions"></div>
                 </div>
             </div>
             
@@ -734,22 +771,27 @@
                 <h4>图例说明</h4>
                 <div class="legend-item"><div class="legend-color start"></div>起点</div>
                 <div class="legend-item"><div class="legend-color end"></div>终点</div>
-                <div class="legend-item"><div class="legend-color point"></div>途经点</div>
-                <div class="legend-item"><div class="legend-color path"></div>导航路径</div>
+                <div class="legend-item"><div class="legend-color path-1"></div>一楼路径 (翠绿色)</div>
+                <div class="legend-item"><div class="legend-color path-2"></div>二楼路径 (天蓝色)</div>
+                <div class="legend-item"><div class="legend-color stair"></div>楼梯/跨楼层</div>
             </div>
         </div>
         
         <div class="map-container">
+            <div class="floor-indicator" id="floor-indicator">
+                <div class="dot floor-1"></div>
+                <span>当前楼层: 一楼</span>
+            </div>
             <div class="map-wrapper" id="map-wrapper">
                 <img id="campus-map" src="data/campus.png" alt="校园地图">
                 <svg class="overlay" id="overlay"></svg>
             </div>
             
             <div class="nav-controls">
-                <button class="nav-btn" onclick="zoomOut()" title="缩小" aria-label="缩小地图">−</button>
+                <button class="nav-btn" onclick="zoomOut()" title="缩小">−</button>
                 <div class="zoom-value" id="zoom-value">100%</div>
-                <button class="nav-btn" onclick="zoomIn()" title="放大" aria-label="放大地图">+</button>
-                <button class="nav-btn" onclick="resetView()" title="重置视图" aria-label="重置地图视图">⟲</button>
+                <button class="nav-btn" onclick="zoomIn()" title="放大">+</button>
+                <button class="nav-btn" onclick="resetView()" title="重置视图">⟲</button>
             </div>
         </div>
     </div>
@@ -757,8 +799,14 @@
     <div class="tooltip" id="tooltip"></div>
 
     <script>
-        let points = [];
-        let paths = [];
+        // 全局数据结构
+        let pointsFloor1 = [];  // 一楼节点
+        let pointsFloor2 = [];  // 二楼节点
+        let pathsFloor1 = [];   // 一楼路径
+        let pathsFloor2 = [];   // 二楼路径
+        let virtualConnections = []; // 跨楼层连接（楼梯）
+        
+        let currentFloor = 1;   // 当前显示楼层 (1=一楼, 2=二楼, 0=全部)
         let scale = 1;
         let offsetX = 0;
         let offsetY = 0;
@@ -766,53 +814,147 @@
         let dragStart = { x: 0, y: 0 };
         let currentPath = [];
         let currentStartId = '';
+        let currentStartFloor = 1;
         let currentEndId = '';
         let debounceTimers = { start: null, end: null };
-        let activeInputType = '';
 
-        const POPULAR_LOCATIONS = ['E-4留学生外籍教师综合楼', 'E-0食堂', 'D-2体育馆', 'D-1城市交通与物流学院', 'C-2图书馆', 'C-4会堂', 'D-3中德智能建造学院商学院', 'C-00食堂'];
+        // 热门地点
+        const POPULAR_LOCATIONS = [
+            'E-4留学生外籍教师综合楼', 'E-0食堂', 'D-2体育馆(西)', 
+            'D-1城市交通与物流学院', 'C-2图书馆', 'C-4会堂(南)',
+            'D-3中德智能建造学院商学院', 'C-00食堂', 'C-1人工智能学院'
+        ];
 
+        // 加载所有数据
         async function loadData() {
             try {
-                const nodesResponse = await fetch('data/nodes.csv');
-                const nodesText = await nodesResponse.text();
-                parseNodesData(nodesText);
+                // 并行加载所有数据文件
+                const [nodes1Text, nodes2Text, edges1Text, edges2Text, virticalText] = await Promise.all([
+                    fetch('data/nodes1.csv').then(r => r.text()),
+                    fetch('data/nodes2.csv').then(r => r.text()),
+                    fetch('data/edges1.csv').then(r => r.text()),
+                    fetch('data/edges2.csv').then(r => r.text()),
+                    fetch('data/virtical.csv').then(r => r.text())
+                ]);
 
-                const edgesResponse = await fetch('data/edges.csv');
-                const edgesText = await edgesResponse.text();
-                parseEdgesData(edgesText);
+                // 解析数据
+                parseNodesData(nodes1Text, 1);
+                parseNodesData(nodes2Text, 2);
+                parseEdgesData(edges1Text, 1);
+                parseEdgesData(edges2Text, 2);
+                parseVirtualData(virticalText);
+
+                console.log('数据加载完成:');
+                console.log('- 一楼节点:', pointsFloor1.length);
+                console.log('- 二楼节点:', pointsFloor2.length);
+                console.log('- 一楼路径:', pathsFloor1.length);
+                console.log('- 二楼路径:', pathsFloor2.length);
+                console.log('- 跨楼层连接:', virtualConnections.length);
 
                 setupSearchInputs();
                 renderPoints();
                 document.getElementById('loading').classList.add('hidden');
             } catch (error) {
                 console.error('加载数据失败:', error);
-                alert('加载数据失败，请检查数据文件是否存在！');
+                alert('加载数据失败，请检查数据文件是否存在！\n错误: ' + error.message);
                 document.getElementById('loading').classList.add('hidden');
             }
         }
 
-        function parseNodesData(text) {
-            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('id') && !line.startsWith('name') && !line.startsWith('\ufeffid') && !line.startsWith('\ufeffname'));
-            points = [];
+        // 解析节点数据
+        function parseNodesData(text, floor) {
+            const lines = text.split('\n').filter(line => {
+                const trimmed = line.trim();
+                return trimmed && !trimmed.startsWith('id') && !trimmed.startsWith('name') && !trimmed.startsWith('\ufeff');
+            });
+            
             lines.forEach(line => {
                 const parts = line.split(',');
                 if (parts.length >= 3) {
-                    const id = parts[0].trim();
-                    points.push({
-                        id: id,
-                        name: id,
-                        type: inferType(id),
+                    const name = parts[0].trim();
+                    const point = {
+                        id: name,
+                        name: name,
+                        floor: floor,
                         px: parseInt(parts[1].trim()),
                         py: parseInt(parts[2].trim()),
-                        isPopular: POPULAR_LOCATIONS.includes(id)
-                    });
+                        isfloor: parts.length >= 4 ? parseInt(parts[3].trim()) : 0,
+                        type: inferType(name),
+                        isPopular: POPULAR_LOCATIONS.includes(name)
+                    };
+                    
+                    if (floor === 1) {
+                        pointsFloor1.push(point);
+                    } else {
+                        pointsFloor2.push(point);
+                    }
                 }
             });
-            console.log('加载节点数据:', points.length, '个节点');
         }
 
+        // 解析边数据
+        function parseEdgesData(text, floor) {
+            const lines = text.split('\n').filter(line => {
+                const trimmed = line.trim();
+                return trimmed && !trimmed.startsWith('source') && !trimmed.startsWith('from');
+            });
+            
+            lines.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 3) {
+                    const fromId = parts[0].trim();
+                    const toId = parts[1].trim();
+                    const distance = parseFloat(parts[2].trim());
+                    
+                    if (!isNaN(distance) && distance > 0) {
+                        const edge = {
+                            from: fromId,
+                            to: toId,
+                            distance: distance,
+                            floor: floor
+                        };
+                        
+                        if (floor === 1) {
+                            pathsFloor1.push(edge);
+                        } else {
+                            pathsFloor2.push(edge);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 解析跨楼层连接数据
+        function parseVirtualData(text) {
+            const lines = text.split('\n').filter(line => {
+                const trimmed = line.trim();
+                return trimmed && !trimmed.startsWith('source') && !trimmed.startsWith('from');
+            });
+            
+            lines.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 3) {
+                    const fromId = parts[0].trim();
+                    const toId = parts[1].trim();
+                    const distance = parseFloat(parts[2].trim());
+                    
+                    if (!isNaN(distance) && distance > 0) {
+                        // from和to相同表示是楼梯节点
+                        if (fromId === toId) {
+                            virtualConnections.push({
+                                node: fromId,
+                                distance: distance,
+                                type: 'stair'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // 推断节点类型
         function inferType(name) {
+            if (name.includes('楼梯')) return 'stair';
             if (name.includes('宿舍')) return 'dormitory';
             if (name.includes('食堂') || name.includes('餐厅')) return 'canteen';
             if (name.includes('学院') || name.includes('大学')) return 'college';
@@ -820,110 +962,82 @@
             if (name.includes('图书馆')) return 'library';
             if (name.includes('医院')) return 'hospital';
             if (name.includes('拐点')) return 'intersection';
-            if (name.includes('F')) return 'elevator';
+            if (name.includes('F') && !name.includes('食堂')) return 'stair';
             if (name.includes('会堂')) return 'hall';
             if (name.includes('行政')) return 'admin';
             if (name.includes('服务中心')) return 'service';
-            if (name.includes('酒店')) return 'hotel';
-            if (name.includes('中心')) return 'center';
+            if (name.includes('操场')) return 'playground';
             return 'building';
         }
 
-        function parseEdgesData(text) {
-            const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('source') && !line.startsWith('from'));
-            paths = [];
-            lines.forEach(line => {
-                const parts = line.split(',');
-                if (parts.length >= 3) {
-                    const fromId = parts[0].trim();
-                    const toId = parts[1].trim();
-                    const fromNode = points.find(p => p.id === fromId);
-                    const toNode = points.find(p => p.id === toId);
-                    
-                    if (fromNode && toNode) {
-                        paths.push({
-                            start_id: fromId,
-                            end_id: toId,
-                            start_name: fromNode.name,
-                            end_name: toNode.name,
-                            distance: parseFloat(parts[2].trim()),
-                            direction: calculateDirection(fromNode, toNode),
-                            path_type: 'direct'
-                        });
-                    }
-                }
-            });
-            console.log('加载边数据:', paths.length, '条边');
+        // 获取类型图标
+        function getTypeIcon(type) {
+            const icons = {
+                'stair': '🪜',
+                'dormitory': '🏠',
+                'canteen': '🍽️',
+                'college': '🏛️',
+                'gym': '🏋️',
+                'library': '📚',
+                'hospital': '🏥',
+                'intersection': '🔀',
+                'hall': '🎭',
+                'admin': '🏛️',
+                'service': '🛎️',
+                'playground': '⚽',
+                'building': '🏢'
+            };
+            return icons[type] || '📍';
         }
 
-        function calculateDirection(from, to) {
-            const dx = to.px - from.px;
-            const dy = to.py - from.py;
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            
-            if (angle >= -22.5 && angle < 22.5) return '东';
-            if (angle >= 22.5 && angle < 67.5) return '东南';
-            if (angle >= 67.5 && angle < 112.5) return '南';
-            if (angle >= 112.5 && angle < 157.5) return '西南';
-            if (angle >= 157.5 || angle < -157.5) return '西';
-            if (angle >= -157.5 && angle < -112.5) return '西北';
-            if (angle >= -112.5 && angle < -67.5) return '北';
-            if (angle >= -67.5 && angle < -22.5) return '东北';
-            return '未知';
+        // 获取类型名称
+        function getTypeName(type) {
+            const names = {
+                'stair': '楼梯',
+                'dormitory': '宿舍',
+                'canteen': '食堂',
+                'college': '学院',
+                'gym': '体育馆',
+                'library': '图书馆',
+                'hospital': '医院',
+                'intersection': '路口',
+                'hall': '会堂',
+                'admin': '行政楼',
+                'service': '服务中心',
+                'playground': '操场',
+                'building': '建筑'
+            };
+            return names[type] || type;
         }
 
+        // 设置搜索输入框
         function setupSearchInputs() {
             const startInput = document.getElementById('start-input');
             const endInput = document.getElementById('end-input');
             const startSuggestions = document.getElementById('start-suggestions');
             const endSuggestions = document.getElementById('end-suggestions');
 
-            setupEnhancedSearchInput(startInput, startSuggestions, 'start');
-            setupEnhancedSearchInput(endInput, endSuggestions, 'end');
-
-            startInput.value = 'E-4留学生外籍教师综合楼';
-            endInput.value = 'D-3中德智能建造学院商学院';
-            currentStartId = 'E-4留学生外籍教师综合楼';
-            currentEndId = 'D-3中德智能建造学院商学院';
+            setupSearchInput(startInput, startSuggestions, 'start');
+            setupSearchInput(endInput, endSuggestions, 'end');
         }
 
-        function debounce(func, delay) {
-            return function() {
-                const context = this;
-                const args = arguments;
-                clearTimeout(debounceTimers[activeInputType]);
-                debounceTimers[activeInputType] = setTimeout(() => {
-                    func.apply(context, args);
-                }, delay);
-            };
-        }
-
-        function setupEnhancedSearchInput(input, suggestions, type) {
-            const debouncedSearch = debounce(function(query) {
-                performSearch(input, suggestions, query, type);
-            }, 350);
-
+        // 设置搜索输入框事件
+        function setupSearchInput(input, suggestions, type) {
             input.addEventListener('input', function() {
-                activeInputType = type;
                 const query = this.value.trim().toLowerCase();
-                
-                if (query.length < 2) {
-                    clearTimeout(debounceTimers[type]);
+                if (query.length < 1) {
                     suggestions.innerHTML = '';
                     suggestions.classList.remove('active');
-                    input.setAttribute('aria-expanded', 'false');
                     return;
                 }
-                
-                debouncedSearch(query);
+                performSearch(query, suggestions, type);
             });
 
             input.addEventListener('focus', function() {
-                activeInputType = type;
                 const query = this.value.trim().toLowerCase();
-                if (query.length >= 2) {
-                    debouncedSearch(query);
-                } else if (points.length > 0) {
+                if (query.length >= 1) {
+                    performSearch(query, suggestions, type);
+                } else {
                     showPopularLocations(suggestions, type);
                 }
             });
@@ -931,300 +1045,590 @@
             input.addEventListener('blur', function() {
                 setTimeout(() => {
                     suggestions.classList.remove('active');
-                    input.setAttribute('aria-expanded', 'false');
                 }, 200);
-            });
-
-            input.addEventListener('keydown', function(e) {
-                const items = suggestions.querySelectorAll('.suggestion-item:not(.disabled)');
-                const activeItem = suggestions.querySelector('.suggestion-item.active');
-                
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (activeItem) {
-                        activeItem.classList.remove('active');
-                        activeItem.setAttribute('aria-selected', 'false');
-                        const next = activeItem.nextElementSibling;
-                        if (next && !next.classList.contains('disabled')) {
-                            next.classList.add('active');
-                            next.setAttribute('aria-selected', 'true');
-                            next.scrollIntoView({ block: 'nearest' });
-                        }
-                    } else if (items.length > 0) {
-                        items[0].classList.add('active');
-                        items[0].setAttribute('aria-selected', 'true');
-                    }
-                    input.setAttribute('aria-expanded', 'true');
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (activeItem) {
-                        activeItem.classList.remove('active');
-                        activeItem.setAttribute('aria-selected', 'false');
-                        const prev = activeItem.previousElementSibling;
-                        if (prev && !prev.classList.contains('disabled')) {
-                            prev.classList.add('active');
-                            prev.setAttribute('aria-selected', 'true');
-                            prev.scrollIntoView({ block: 'nearest' });
-                        }
-                    } else if (items.length > 0) {
-                        items[items.length - 1].classList.add('active');
-                        items[items.length - 1].setAttribute('aria-selected', 'true');
-                    }
-                    input.setAttribute('aria-expanded', 'true');
-                } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const selected = activeItem || items[0];
-                    if (selected && !selected.classList.contains('disabled')) {
-                        selectSuggestion(selected, input, suggestions, type);
-                    }
-                } else if (e.key === 'Escape') {
-                    suggestions.classList.remove('active');
-                    input.setAttribute('aria-expanded', 'false');
-                }
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!input.contains(e.target) && !suggestions.contains(e.target)) {
-                    suggestions.classList.remove('active');
-                    input.setAttribute('aria-expanded', 'false');
-                }
             });
         }
 
+        // 显示热门地点
         function showPopularLocations(suggestions, type) {
-            const popular = points.filter(p => p.isPopular);
+            const allPoints = getAllPoints();
+            const popular = allPoints.filter(p => p.isPopular).slice(0, 6);
             
             if (popular.length === 0) return;
 
             suggestions.innerHTML = `
-                <div class="suggestion-header" role="presentation">热门地点</div>
-                ${popular.map((p, index) => `
-                    <div 
-                        class="suggestion-item" 
-                        data-id="${p.id}" 
-                        data-name="${p.name}"
-                        role="option"
-                        aria-selected="false"
-                        tabindex="0"
-                    >
+                <div class="suggestion-header">热门地点</div>
+                ${popular.map(p => `
+                    <div class="suggestion-item" data-id="${p.id}" data-floor="${p.floor}" data-name="${p.name}">
                         <span class="icon">${getTypeIcon(p.type)}</span>
                         <div class="content">
                             <div class="title">${p.name}</div>
                             <div class="subtitle">${getTypeName(p.type)}</div>
                         </div>
+                        <span class="floor-tag floor-${p.floor}">${p.floor}F</span>
                     </div>
                 `).join('')}
             `;
             
             suggestions.classList.add('active');
-            input.setAttribute('aria-expanded', 'true');
-
-            suggestions.querySelectorAll('.suggestion-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    selectSuggestion(item, input, suggestions, type);
-                });
-                item.addEventListener('mouseenter', () => {
-                    item.classList.add('active');
-                    item.setAttribute('aria-selected', 'true');
-                });
-                item.addEventListener('mouseleave', () => {
-                    item.classList.remove('active');
-                    item.setAttribute('aria-selected', 'false');
-                });
-            });
+            attachSuggestionEvents(suggestions, type);
         }
 
-        async function performSearch(input, suggestions, query, type) {
-            if (!query || query.length < 2) {
-                suggestions.innerHTML = '';
-                suggestions.classList.remove('active');
-                input.setAttribute('aria-expanded', 'false');
-                return;
-            }
+        // 执行搜索
+        function performSearch(query, suggestions, type) {
+            const allPoints = getAllPoints();
+            const results = allPoints.filter(p => 
+                p.name.toLowerCase().includes(query)
+            ).slice(0, 8);
 
-            try {
-                suggestions.innerHTML = '<div class="suggestion-header">搜索中...</div>';
-                suggestions.classList.add('active');
-                input.setAttribute('aria-expanded', 'true');
-
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                const results = searchLocations(query);
-
-                if (results.length === 0) {
-                    suggestions.innerHTML = `
-                        <div class="suggestions-empty">
-                            <div class="icon">🔍</div>
-                            <div>未找到匹配的地点</div>
-                            <div style="font-size: 12px; margin-top: 4px;">请尝试其他关键词</div>
-                        </div>
-                    `;
-                } else {
-                    suggestions.innerHTML = `
-                        <div class="suggestion-header" role="presentation">找到 ${results.length} 个结果</div>
-                        ${results.map((result, index) => `
-                            <div 
-                                class="suggestion-item" 
-                                data-id="${result.id}" 
-                                data-name="${result.name}"
-                                role="option"
-                                aria-selected="false"
-                                aria-posinset="${index + 1}"
-                                aria-setsize="${results.length}"
-                                tabindex="0"
-                            >
-                                <span class="icon">${getTypeIcon(result.type)}</span>
-                                <div class="content">
-                                    <div class="title">${highlightMatch(result.name, query)}</div>
-                                    <div class="subtitle">${getTypeName(result.type)}</div>
-                                </div>
-                                ${result.distance ? `<span class="distance">${result.distance}m</span>` : ''}
-                            </div>
-                        `).join('')}
-                    `;
-
-                    suggestions.querySelectorAll('.suggestion-item').forEach(item => {
-                        item.addEventListener('click', () => {
-                            selectSuggestion(item, input, suggestions, type);
-                        });
-                        item.addEventListener('mouseenter', () => {
-                            const active = suggestions.querySelector('.suggestion-item.active');
-                            if (active) {
-                                active.classList.remove('active');
-                                active.setAttribute('aria-selected', 'false');
-                            }
-                            item.classList.add('active');
-                            item.setAttribute('aria-selected', 'true');
-                        });
-                        item.addEventListener('mouseleave', () => {
-                            item.classList.remove('active');
-                            item.setAttribute('aria-selected', 'false');
-                        });
-                        item.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                selectSuggestion(item, input, suggestions, type);
-                            }
-                        });
-                    });
-                }
-            } catch (error) {
-                console.error('搜索失败:', error);
+            if (results.length === 0) {
                 suggestions.innerHTML = `
-                    <div class="suggestions-empty">
-                        <div class="icon">⚠️</div>
-                        <div>搜索出现错误</div>
-                        <div style="font-size: 12px; margin-top: 4px;">请稍后重试</div>
-                    </div>
+                    <div class="suggestion-header">未找到匹配地点</div>
+                `;
+            } else {
+                suggestions.innerHTML = `
+                    <div class="suggestion-header">找到 ${results.length} 个结果</div>
+                    ${results.map(p => `
+                        <div class="suggestion-item" data-id="${p.id}" data-floor="${p.floor}" data-name="${p.name}">
+                            <span class="icon">${getTypeIcon(p.type)}</span>
+                            <div class="content">
+                                <div class="title">${highlightMatch(p.name, query)}</div>
+                                <div class="subtitle">${getTypeName(p.type)}</div>
+                            </div>
+                            <span class="floor-tag floor-${p.floor}">${p.floor}F</span>
+                        </div>
+                    `).join('')}
                 `;
             }
+            
+            suggestions.classList.add('active');
+            attachSuggestionEvents(suggestions, type);
         }
 
-        function searchLocations(query) {
-            const results = points.map(point => {
-                const nameLower = point.name.toLowerCase();
-                const idLower = point.id.toLowerCase();
-                
-                let score = 0;
-                
-                if (nameLower === query) {
-                    score += 100;
-                } else if (nameLower.startsWith(query)) {
-                    score += 80;
-                } else if (nameLower.includes(query)) {
-                    score += 60;
-                }
-                
-                if (point.isPopular) {
-                    score += 20;
-                }
-                
-                const typeOrder = ['college', 'entrance', 'library', 'canteen', 'dormitory', 'playground', 'gym', 'stadium', 'hospital', 'hall', 'admin', 'service', 'hotel', 'center', 'stair', 'intersection', 'elevator'];
-                const typeIndex = typeOrder.indexOf(point.type);
-                if (typeIndex !== -1) {
-                    score += (typeOrder.length - typeIndex) * 5;
-                }
-                
-                return {
-                    ...point,
-                    score: score
-                };
-            }).filter(p => p.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 8);
-
-            return results;
-        }
-
+        // 高亮匹配文字
         function highlightMatch(text, query) {
             const regex = new RegExp(`(${query})`, 'gi');
             return text.replace(regex, '<strong style="color: #667eea;">$1</strong>');
         }
 
-        function getTypeIcon(type) {
-            const icons = {
-                'entrance': '🚪',
-                'stair': '🪜',
-                'intersection': '🔀',
-                'college': '🏛️',
-                'playground': '⚽',
-                'canteen': '🍽️',
-                'dormitory': '🏠',
-                'library': '📚',
-                'building': '🏢',
-                'gym': '🏋️',
-                'hospital': '🏥',
-                'elevator': '🛗',
-                'hall': '🎭',
-                'admin': '🏛️',
-                'service': '🛎️',
-                'hotel': '🏨',
-                'center': '🏢',
-                'stadium': '🏟️'
-            };
-            return icons[type] || '📍';
+        // 绑定建议项事件
+        function attachSuggestionEvents(suggestions, type) {
+            suggestions.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    selectSuggestion(item, type);
+                });
+                item.addEventListener('mouseenter', () => {
+                    item.classList.add('active');
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.classList.remove('active');
+                });
+            });
         }
 
-        function getTypeName(type) {
-            const names = {
-                'entrance': '入口',
-                'stair': '楼梯',
-                'intersection': '路口',
-                'college': '学院',
-                'playground': '操场',
-                'canteen': '食堂',
-                'dormitory': '宿舍',
-                'library': '图书馆',
-                'building': '建筑',
-                'gym': '体育馆',
-                'hospital': '医院',
-                'elevator': '电梯',
-                'hall': '会堂',
-                'admin': '行政楼',
-                'service': '服务中心',
-                'hotel': '酒店',
-                'center': '中心',
-                'stadium': '体育场'
-            };
-            return names[type] || type;
-        }
-
-        function selectSuggestion(item, input, suggestions, type) {
+        // 选择建议项
+        function selectSuggestion(item, type) {
             const id = item.dataset.id;
+            const floor = parseInt(item.dataset.floor);
             const name = item.dataset.name;
             
+            const input = document.getElementById(type === 'start' ? 'start-input' : 'end-input');
+            const suggestions = document.getElementById(type === 'start' ? 'start-suggestions' : 'end-suggestions');
+            
             input.value = name;
+            suggestions.classList.remove('active');
             
             if (type === 'start') {
                 currentStartId = id;
+                currentStartFloor = floor;
             } else {
                 currentEndId = id;
             }
-            
-            suggestions.classList.remove('active');
-            input.setAttribute('aria-expanded', 'false');
-            input.focus();
         }
 
+        // 获取所有节点
+        function getAllPoints() {
+            const allPoints = [];
+            const seen = new Set();
+            
+            // 合并一楼和二楼节点，去重
+            [...pointsFloor1, ...pointsFloor2].forEach(p => {
+                const key = `${p.id}_${p.floor}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    allPoints.push(p);
+                }
+            });
+            
+            return allPoints;
+        }
+
+        // 选择楼层
+        function selectFloor(floor) {
+            currentFloor = floor;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.floor) === floor) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 更新楼层指示器
+            const indicator = document.getElementById('floor-indicator');
+            if (floor === 1) {
+                indicator.innerHTML = '<div class="dot floor-1"></div><span>当前楼层: 一楼</span>';
+            } else if (floor === 2) {
+                indicator.innerHTML = '<div class="dot floor-2"></div><span>当前楼层: 二楼</span>';
+            } else {
+                indicator.innerHTML = '<div class="dot floor-1"></div><div class="dot floor-2" style="margin-left: 5px;"></div><span>跨楼层导航</span>';
+            }
+            
+            // 重新渲染节点
+            renderPoints();
+        }
+
+        // 渲染节点
+        function renderPoints() {
+            const container = document.getElementById('map-wrapper');
+            const existingMarkers = container.querySelectorAll('.point-marker');
+            existingMarkers.forEach(m => m.remove());
+            
+            let pointsToRender = [];
+            
+            if (currentFloor === 1) {
+                pointsToRender = pointsFloor1;
+            } else if (currentFloor === 2) {
+                pointsToRender = pointsFloor2;
+            } else {
+                // 跨楼层模式，显示所有节点
+                pointsToRender = getAllPoints();
+            }
+            
+            pointsToRender.forEach(point => {
+                const marker = document.createElement('div');
+                marker.className = 'point-marker normal';
+                
+                // 根据楼层添加样式
+                if (point.floor === 1) {
+                    marker.classList.add('floor-1');
+                } else if (point.floor === 2) {
+                    marker.classList.add('floor-2');
+                }
+                
+                // 楼梯节点特殊样式
+                if (point.type === 'stair' || point.isfloor === 1) {
+                    marker.classList.add('stair');
+                }
+                
+                marker.style.left = point.px + 'px';
+                marker.style.top = point.py + 'px';
+                marker.dataset.id = point.id;
+                marker.dataset.floor = point.floor;
+                marker.dataset.name = point.name;
+                
+                const label = document.createElement('div');
+                label.className = 'point-label';
+                label.textContent = `${point.name} (${point.floor}F)`;
+                marker.appendChild(label);
+                
+                marker.addEventListener('mouseenter', (e) => {
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.textContent = `${point.name} (${point.floor}F - ${getTypeName(point.type)})`;
+                    tooltip.style.left = e.clientX + 15 + 'px';
+                    tooltip.style.top = e.clientY + 15 + 'px';
+                    tooltip.classList.add('visible');
+                });
+                
+                marker.addEventListener('mouseleave', () => {
+                    document.getElementById('tooltip').classList.remove('visible');
+                });
+                
+                marker.addEventListener('click', () => {
+                    const startInput = document.getElementById('start-input');
+                    const endInput = document.getElementById('end-input');
+                    
+                    if (!startInput.value.trim()) {
+                        startInput.value = point.name;
+                        currentStartId = point.id;
+                        currentStartFloor = point.floor;
+                    } else if (!endInput.value.trim() || endInput.value === startInput.value) {
+                        endInput.value = point.name;
+                        currentEndId = point.id;
+                    }
+                });
+                
+                container.appendChild(marker);
+            });
+        }
+
+        // 构建跨楼层图
+        function buildCrossFloorGraph() {
+            const graph = {};
+            
+            // 添加所有节点
+            pointsFloor1.forEach(p => {
+                graph[`${p.id}_1`] = [];
+            });
+            pointsFloor2.forEach(p => {
+                graph[`${p.id}_2`] = [];
+            });
+            
+            // 添加一楼边
+            pathsFloor1.forEach(edge => {
+                const fromKey = `${edge.from}_1`;
+                const toKey = `${edge.to}_1`;
+                
+                if (!graph[fromKey]) graph[fromKey] = [];
+                if (!graph[toKey]) graph[toKey] = [];
+                
+                graph[fromKey].push({
+                    target: toKey,
+                    distance: edge.distance,
+                    floor: 1,
+                    nodeId: edge.to
+                });
+                
+                graph[toKey].push({
+                    target: fromKey,
+                    distance: edge.distance,
+                    floor: 1,
+                    nodeId: edge.from
+                });
+            });
+            
+            // 添加二楼边
+            pathsFloor2.forEach(edge => {
+                const fromKey = `${edge.from}_2`;
+                const toKey = `${edge.to}_2`;
+                
+                if (!graph[fromKey]) graph[fromKey] = [];
+                if (!graph[toKey]) graph[toKey] = [];
+                
+                graph[fromKey].push({
+                    target: toKey,
+                    distance: edge.distance,
+                    floor: 2,
+                    nodeId: edge.to
+                });
+                
+                graph[toKey].push({
+                    target: fromKey,
+                    distance: edge.distance,
+                    floor: 2,
+                    nodeId: edge.from
+                });
+            });
+            
+            // 添加跨楼层连接（楼梯）
+            virtualConnections.forEach(conn => {
+                const key1 = `${conn.node}_1`;
+                const key2 = `${conn.node}_2`;
+                
+                if (graph[key1] && graph[key2]) {
+                    graph[key1].push({
+                        target: key2,
+                        distance: conn.distance,
+                        floor: 0,  // 跨楼层标记
+                        nodeId: conn.node,
+                        isStair: true
+                    });
+                    
+                    graph[key2].push({
+                        target: key1,
+                        distance: conn.distance,
+                        floor: 0,
+                        nodeId: conn.node,
+                        isStair: true
+                    });
+                }
+            });
+            
+            return graph;
+        }
+
+        // 跨楼层Dijkstra算法
+        function dijkstraCrossFloor(startId, startFloor, endId) {
+            const graph = buildCrossFloorGraph();
+            const startKey = `${startId}_${startFloor}`;
+            
+            // 尝试两个楼层的终点
+            const endKeys = [`${endId}_1`, `${endId}_2`].filter(k => graph[k]);
+            
+            if (!graph[startKey]) {
+                console.error('起点不存在:', startKey);
+                return null;
+            }
+            
+            const distances = {};
+            const predecessors = {};
+            const visited = new Set();
+            
+            Object.keys(graph).forEach(node => {
+                distances[node] = Infinity;
+                predecessors[node] = null;
+            });
+            
+            distances[startKey] = 0;
+            
+            while (visited.size < Object.keys(graph).length) {
+                let minDist = Infinity;
+                let current = null;
+                
+                Object.keys(graph).forEach(node => {
+                    if (!visited.has(node) && distances[node] < minDist) {
+                        minDist = distances[node];
+                        current = node;
+                    }
+                });
+                
+                if (current === null) break;
+                
+                // 检查是否到达终点
+                if (endKeys.includes(current)) break;
+                
+                visited.add(current);
+                
+                graph[current].forEach(edge => {
+                    if (!visited.has(edge.target)) {
+                        const newDist = distances[current] + edge.distance;
+                        if (newDist < distances[edge.target]) {
+                            distances[edge.target] = newDist;
+                            predecessors[edge.target] = {
+                                node: current,
+                                edge: edge
+                            };
+                        }
+                    }
+                });
+            }
+            
+            // 找到最近的终点
+            let bestEndKey = null;
+            let bestDistance = Infinity;
+            
+            endKeys.forEach(key => {
+                if (distances[key] < bestDistance) {
+                    bestDistance = distances[key];
+                    bestEndKey = key;
+                }
+            });
+            
+            if (bestDistance === Infinity) {
+                return null;
+            }
+            
+            // 重建路径
+            const path = [];
+            let current = bestEndKey;
+            
+            while (current !== null) {
+                const pred = predecessors[current];
+                const edge = pred ? pred.edge : null;
+                const nodeInfo = parseNodeKey(current);
+                
+                path.unshift({
+                    id: nodeInfo.id,
+                    floor: nodeInfo.floor,
+                    edge: edge
+                });
+                
+                current = pred ? pred.node : null;
+            }
+            
+            return path;
+        }
+
+        // 解析节点键
+        function parseNodeKey(key) {
+            const lastUnderscore = key.lastIndexOf('_');
+            return {
+                id: key.substring(0, lastUnderscore),
+                floor: parseInt(key.substring(lastUnderscore + 1))
+            };
+        }
+
+        // 计算路径
+        function calculatePath() {
+            clearPath();
+            
+            if (!currentStartId) {
+                alert('请选择起点！');
+                return;
+            }
+            
+            if (!currentEndId) {
+                alert('请选择终点！');
+                return;
+            }
+            
+            if (currentStartId === currentEndId) {
+                alert('起点和终点不能相同！');
+                return;
+            }
+            
+            const path = dijkstraCrossFloor(currentStartId, currentStartFloor, currentEndId);
+            
+            if (!path || path.length === 0) {
+                alert('无法找到路径！请确保起点和终点之间存在有效路径。');
+                return;
+            }
+            
+            currentPath = path;
+            highlightPath(path);
+            showPathInfo(path);
+        }
+
+        // 清除路径
+        function clearPath() {
+            const overlay = document.getElementById('overlay');
+            overlay.innerHTML = '';
+            
+            const markers = document.querySelectorAll('.point-marker');
+            markers.forEach(marker => {
+                marker.classList.remove('start', 'end');
+                marker.classList.add('normal');
+            });
+            
+            currentPath = [];
+            document.getElementById('path-info').classList.remove('active');
+        }
+
+        // 高亮路径
+        function highlightPath(path) {
+            const markers = document.querySelectorAll('.point-marker');
+            
+            markers.forEach(marker => {
+                const markerId = marker.dataset.id;
+                const markerFloor = parseInt(marker.dataset.floor);
+                
+                const pathIndex = path.findIndex(p => p.id === markerId && p.floor === markerFloor);
+                
+                if (pathIndex === 0) {
+                    marker.classList.remove('normal', 'floor-1', 'floor-2');
+                    marker.classList.add('start');
+                } else if (pathIndex === path.length - 1) {
+                    marker.classList.remove('normal', 'floor-1', 'floor-2');
+                    marker.classList.add('end');
+                }
+            });
+            
+            drawPathLines(path);
+        }
+
+        // 绘制路径线
+        function drawPathLines(path) {
+            const overlay = document.getElementById('overlay');
+            const map = document.getElementById('campus-map');
+            
+            overlay.setAttribute('width', map.naturalWidth);
+            overlay.setAttribute('height', map.naturalHeight);
+            overlay.style.width = map.naturalWidth + 'px';
+            overlay.style.height = map.naturalHeight + 'px';
+            
+            // 获取所有节点坐标
+            const allPoints = getAllPoints();
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const current = path[i];
+                const next = path[i + 1];
+                
+                const currentPoint = allPoints.find(p => p.id === current.id && p.floor === current.floor);
+                const nextPoint = allPoints.find(p => p.id === next.id && p.floor === next.floor);
+                
+                if (!currentPoint || !nextPoint) continue;
+                
+                const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                pathElement.setAttribute('d', `M ${currentPoint.px} ${currentPoint.py} L ${nextPoint.px} ${nextPoint.py}`);
+                pathElement.setAttribute('class', 'path-line');
+                
+                // 根据楼层设置颜色
+                if (current.floor !== next.floor) {
+                    // 跨楼层
+                    pathElement.classList.add('cross-floor');
+                } else if (current.floor === 1) {
+                    pathElement.classList.add('floor-1');
+                } else if (current.floor === 2) {
+                    pathElement.classList.add('floor-2');
+                }
+                
+                overlay.appendChild(pathElement);
+                
+                // 动画效果
+                requestAnimationFrame(() => {
+                    const pathLength = pathElement.getTotalLength();
+                    pathElement.style.strokeDasharray = pathLength;
+                    pathElement.style.strokeDashoffset = pathLength;
+                    pathElement.style.transition = `stroke-dashoffset 0.8s ease-out`;
+                    
+                    requestAnimationFrame(() => {
+                        pathElement.style.strokeDashoffset = '0';
+                    });
+                });
+            }
+        }
+
+        // 显示路径信息
+        function showPathInfo(path) {
+            const detailsDiv = document.getElementById('path-details');
+            const stepsDiv = document.getElementById('path-steps');
+            
+            let totalDistance = 0;
+            let crossFloorCount = 0;
+            const steps = [];
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const current = path[i];
+                const next = path[i + 1];
+                
+                if (current.edge) {
+                    totalDistance += current.edge.distance;
+                    
+                    const allPoints = getAllPoints();
+                    const currentPoint = allPoints.find(p => p.id === current.id && p.floor === current.floor);
+                    const nextPoint = allPoints.find(p => p.id === next.id && p.floor === next.floor);
+                    
+                    let stepClass = '';
+                    let stepText = '';
+                    
+                    if (current.floor !== next.floor) {
+                        stepClass = 'cross-floor';
+                        stepText = `🪜 ${currentPoint.name} → ${nextPoint.name} (跨楼层，${current.edge.distance}米)`;
+                        crossFloorCount++;
+                    } else if (current.floor === 1) {
+                        stepClass = 'floor-1';
+                        stepText = `${currentPoint.name} → ${nextPoint.name} (一楼，${current.edge.distance}米)`;
+                    } else {
+                        stepClass = 'floor-2';
+                        stepText = `${currentPoint.name} → ${nextPoint.name} (二楼，${current.edge.distance}米)`;
+                    }
+                    
+                    steps.push({ text: stepText, class: stepClass });
+                }
+            }
+            
+            const startFloor = path[0].floor;
+            const endFloor = path[path.length - 1].floor;
+            const floorText = startFloor === endFloor ? 
+                `${startFloor}楼` : 
+                `${startFloor}楼 → ${endFloor}楼`;
+            
+            detailsDiv.innerHTML = `
+                <strong>总距离：</strong>${totalDistance.toFixed(1)} 米<br>
+                <strong>楼层：</strong>${floorText}<br>
+                <strong>跨楼层次数：</strong>${crossFloorCount} 次<br>
+                <strong>途经点：</strong>${path.length - 2} 个
+            `;
+            
+            stepsDiv.innerHTML = steps.map((step, index) => 
+                `<div class="path-step ${step.class}"><strong>${index + 1}.</strong> ${step.text}</div>`
+            ).join('');
+            
+            document.getElementById('path-info').classList.add('active');
+        }
+
+        // 初始化地图
         function initMap() {
             const map = document.getElementById('campus-map');
             const wrapper = document.getElementById('map-wrapper');
@@ -1238,27 +1642,6 @@
             overlay.setAttribute('height', map.naturalHeight);
             overlay.style.width = map.naturalWidth + 'px';
             overlay.style.height = map.naturalHeight + 'px';
-            
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-            gradient.setAttribute('id', 'pathGradient');
-            gradient.setAttribute('x1', '0%');
-            gradient.setAttribute('y1', '0%');
-            gradient.setAttribute('x2', '100%');
-            gradient.setAttribute('y2', '0%');
-            
-            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop1.setAttribute('offset', '0%');
-            stop1.setAttribute('stop-color', '#667eea');
-            
-            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop2.setAttribute('offset', '100%');
-            stop2.setAttribute('stop-color', '#764ba2');
-            
-            gradient.appendChild(stop1);
-            gradient.appendChild(stop2);
-            defs.appendChild(gradient);
-            overlay.appendChild(defs);
 
             adjustMapToContainer();
             addDragListeners();
@@ -1268,7 +1651,6 @@
         function adjustMapToContainer() {
             const map = document.getElementById('campus-map');
             const container = document.querySelector('.map-container');
-            const wrapper = document.getElementById('map-wrapper');
             
             const containerWidth = container.clientWidth;
             const containerHeight = container.clientHeight;
@@ -1359,27 +1741,7 @@
         }
 
         function resetView() {
-            const map = document.getElementById('campus-map');
-            const container = document.querySelector('.map-container');
-            
-            const containerWidth = container.clientWidth;
-            const containerHeight = container.clientHeight;
-            
-            const mapRatio = map.naturalWidth / map.naturalHeight;
-            const containerRatio = containerWidth / containerHeight;
-            
-            if (containerRatio > mapRatio) {
-                scale = containerHeight / map.naturalHeight;
-            } else {
-                scale = containerWidth / map.naturalWidth;
-            }
-            
-            scale = Math.min(scale, 1);
-            offsetX = (containerWidth - map.naturalWidth * scale) / 2;
-            offsetY = (containerHeight - map.naturalHeight * scale) / 2;
-            
-            updateTransform();
-            updateZoomDisplay();
+            adjustMapToContainer();
         }
 
         function updateTransform() {
@@ -1391,308 +1753,7 @@
             document.getElementById('zoom-value').textContent = Math.round(scale * 100) + '%';
         }
 
-        function renderPoints() {
-            const container = document.getElementById('map-wrapper');
-            const existingMarkers = container.querySelectorAll('.point-marker');
-            existingMarkers.forEach(m => m.remove());
-            
-            points.forEach(point => {
-                const marker = document.createElement('div');
-                marker.className = 'point-marker normal';
-                marker.style.left = point.px + 'px';
-                marker.style.top = point.py + 'px';
-                marker.dataset.id = point.id;
-                marker.dataset.name = point.name;
-                
-                const label = document.createElement('div');
-                label.className = 'point-label';
-                label.textContent = point.name;
-                marker.appendChild(label);
-                
-                marker.addEventListener('mouseenter', (e) => {
-                    const tooltip = document.getElementById('tooltip');
-                    tooltip.textContent = `${point.name} (${getTypeName(point.type)})`;
-                    tooltip.style.left = e.clientX + 15 + 'px';
-                    tooltip.style.top = e.clientY + 15 + 'px';
-                    tooltip.classList.add('visible');
-                });
-                
-                marker.addEventListener('mouseleave', () => {
-                    document.getElementById('tooltip').classList.remove('visible');
-                });
-                
-                marker.addEventListener('click', () => {
-                    const startInput = document.getElementById('start-input');
-                    const endInput = document.getElementById('end-input');
-                    
-                    if (!startInput.value.trim()) {
-                        startInput.value = point.name;
-                        currentStartId = point.id;
-                    } else if (!endInput.value.trim() || endInput.value === startInput.value) {
-                        endInput.value = point.name;
-                        currentEndId = point.id;
-                    }
-                });
-                
-                container.appendChild(marker);
-            });
-        }
-
-        function clearPath() {
-            const overlay = document.getElementById('overlay');
-            const pathElements = overlay.querySelectorAll('.path-line');
-            pathElements.forEach(el => el.remove());
-            
-            const markers = document.querySelectorAll('.point-marker');
-            markers.forEach(marker => {
-                marker.classList.remove('start', 'end');
-                marker.classList.add('normal');
-            });
-            
-            currentPath = [];
-            document.getElementById('path-info').classList.remove('active');
-        }
-
-        function calculatePath() {
-            clearPath();
-            
-            const startInput = document.getElementById('start-input');
-            const endInput = document.getElementById('end-input');
-            
-            if (!currentStartId) {
-                const startPoint = points.find(p => p.name === startInput.value);
-                if (startPoint) {
-                    currentStartId = startPoint.id;
-                } else {
-                    alert('请选择有效的起点！');
-                    return;
-                }
-            }
-            
-            if (!currentEndId) {
-                const endPoint = points.find(p => p.name === endInput.value);
-                if (endPoint) {
-                    currentEndId = endPoint.id;
-                } else {
-                    alert('请选择有效的终点！');
-                    return;
-                }
-            }
-            
-            if (currentStartId === currentEndId) {
-                alert('起点和终点不能相同！');
-                return;
-            }
-            
-            const path = dijkstra(currentStartId, currentEndId);
-            
-            if (!path || path.length === 0) {
-                alert('无法找到路径！');
-                return;
-            }
-            
-            currentPath = path;
-            highlightPath(path);
-            showPathInfo(path);
-        }
-
-        function dijkstra(startId, endId) {
-            const graph = buildGraph();
-            const distances = {};
-            const predecessors = {};
-            const visited = new Set();
-            
-            Object.keys(graph).forEach(node => {
-                distances[node] = Infinity;
-                predecessors[node] = null;
-            });
-            
-            distances[startId] = 0;
-            
-            while (visited.size < Object.keys(graph).length) {
-                let minDist = Infinity;
-                let current = null;
-                
-                Object.keys(graph).forEach(node => {
-                    if (!visited.has(node) && distances[node] < minDist) {
-                        minDist = distances[node];
-                        current = node;
-                    }
-                });
-                
-                if (current === null) break;
-                if (current === endId) break;
-                
-                visited.add(current);
-                
-                graph[current].forEach(edge => {
-                    if (!visited.has(edge.target)) {
-                        const newDist = distances[current] + edge.distance;
-                        if (newDist < distances[edge.target]) {
-                            distances[edge.target] = newDist;
-                            predecessors[edge.target] = { node: current, edge: edge };
-                        }
-                    }
-                });
-            }
-            
-            if (distances[endId] === Infinity) return null;
-            
-            const path = [];
-            let current = endId;
-            
-            while (current !== null) {
-                path.unshift(current);
-                const pred = predecessors[current];
-                current = pred ? pred.node : null;
-            }
-            
-            return path;
-        }
-
-        function buildGraph() {
-            const graph = {};
-            
-            points.forEach(point => {
-                graph[point.id] = [];
-            });
-            
-            paths.forEach(path => {
-                if (!graph[path.start_id]) graph[path.start_id] = [];
-                if (!graph[path.end_id]) graph[path.end_id] = [];
-                
-                graph[path.start_id].push({
-                    target: path.end_id,
-                    distance: path.distance,
-                    direction: path.direction,
-                    target_name: path.end_name
-                });
-                
-                graph[path.end_id].push({
-                    target: path.start_id,
-                    distance: path.distance,
-                    direction: reverseDirection(path.direction),
-                    target_name: path.start_name
-                });
-            });
-            
-            return graph;
-        }
-
-        function reverseDirection(dir) {
-            const directions = {
-                '东': '西', '西': '东', '南': '北', '北': '南',
-                '东南': '西北', '西北': '东南', '东北': '西南', '西南': '东北'
-            };
-            return directions[dir] || dir;
-        }
-
-        function highlightPath(path) {
-            const markers = document.querySelectorAll('.point-marker');
-            
-            markers.forEach(marker => {
-                const index = path.indexOf(marker.dataset.id);
-                if (index === 0) {
-                    marker.classList.remove('normal');
-                    marker.classList.add('start');
-                } else if (index === path.length - 1) {
-                    marker.classList.remove('normal');
-                    marker.classList.add('end');
-                }
-            });
-            
-            drawPathLines(path);
-        }
-
-        function drawPathLines(path) {
-            const overlay = document.getElementById('overlay');
-            
-            let pathD = '';
-            let validPoints = [];
-            
-            for (let i = 0; i < path.length; i++) {
-                const point = points.find(p => p.id === path[i]);
-                if (point) {
-                    validPoints.push(point);
-                    if (validPoints.length === 1) {
-                        pathD += `M ${point.px} ${point.py}`;
-                    } else {
-                        pathD += ` L ${point.px} ${point.py}`;
-                    }
-                } else {
-                    console.warn(`路径节点 ${path[i]} 未找到，已跳过`);
-                }
-            }
-            
-            if (validPoints.length < 2) {
-                console.error('路径点数量不足，无法绘制路径');
-                return;
-            }
-            
-            const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            pathElement.setAttribute('d', pathD);
-            pathElement.setAttribute('class', 'path-line');
-            
-            overlay.appendChild(pathElement);
-            
-            requestAnimationFrame(() => {
-                const pathLength = pathElement.getTotalLength();
-                pathElement.style.strokeDasharray = pathLength;
-                pathElement.style.strokeDashoffset = pathLength;
-                pathElement.style.transition = `stroke-dashoffset 1.2s ease-out`;
-                
-                requestAnimationFrame(() => {
-                    pathElement.style.strokeDashoffset = '0';
-                });
-            });
-        }
-
-        function showPathInfo(path) {
-            const detailsDiv = document.getElementById('path-details');
-            const stepsDiv = document.getElementById('path-steps');
-            
-            const pathInfo = getPathInfo(path);
-            
-            detailsDiv.innerHTML = `
-                <strong>总距离：</strong>${pathInfo.totalDistance} 米<br>
-                <strong>途经点：</strong>${path.length - 2} 个<br>
-                <strong>路径长度：</strong>${path.length} 个节点
-            `;
-            
-            let stepsHtml = '';
-            pathInfo.steps.forEach((step, index) => {
-                stepsHtml += `<div class="path-step"><strong>${index + 1}.</strong> ${step}</div>`;
-            });
-            stepsDiv.innerHTML = stepsHtml;
-            
-            document.getElementById('path-info').classList.add('active');
-        }
-
-        function getPathInfo(path) {
-            const graph = buildGraph();
-            let totalDistance = 0;
-            const steps = [];
-            
-            for (let i = 0; i < path.length - 1; i++) {
-                const current = path[i];
-                const next = path[i + 1];
-                
-                const currentPoint = points.find(p => p.id === current);
-                const nextPoint = points.find(p => p.id === next);
-                
-                const edge = graph[current].find(e => e.target === next);
-                
-                if (edge) {
-                    totalDistance += edge.distance;
-                    const distStr = edge.distance % 1 === 0 ? edge.distance : edge.distance.toFixed(2);
-                    steps.push(`${currentPoint.name} → ${nextPoint.name} (${edge.direction}，${distStr}米)`);
-                }
-            }
-            
-            const totalDistStr = totalDistance % 1 === 0 ? totalDistance : totalDistance.toFixed(2);
-            return { totalDistance: totalDistStr, steps };
-        }
-
+        // 页面加载完成后初始化
         document.getElementById('campus-map').addEventListener('load', initMap);
         loadData();
     </script>
