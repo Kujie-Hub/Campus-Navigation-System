@@ -709,7 +709,7 @@
 <body>
     <div class="loading" id="loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">加载跨楼层导航数据...</div>
+        <div class="loading-text">正在连接导航服务...</div>
     </div>
 
     <div class="container">
@@ -812,11 +812,11 @@
         let offsetY = 0;
         let isDragging = false;
         let dragStart = { x: 0, y: 0 };
+        let isDragListenersAdded = false;  // 防止重复绑定
         let currentPath = [];
         let currentStartId = '';
         let currentStartFloor = 1;
         let currentEndId = '';
-        let debounceTimers = { start: null, end: null };
 
         // 热门地点
         const POPULAR_LOCATIONS = [
@@ -825,31 +825,99 @@
             'D-3中德智能建造学院商学院', 'C-00食堂', 'C-1人工智能学院'
         ];
 
-        // 加载所有数据
+        // 健康检查后端API
+        async function checkBackendAPI() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('后端API状态:', data);
+                    return true;
+                }
+            } catch (error) {
+                console.log('后端API不可用，将使用前端JS路径规划');
+            }
+            return false;
+        }
+        
+        // 加载所有数据（支持后端API和本地加载）
         async function loadData() {
             try {
-                // 并行加载所有数据文件
-                const [nodes1Text, nodes2Text, edges1Text, edges2Text, virticalText] = await Promise.all([
-                    fetch('data/nodes1.csv').then(r => r.text()),
-                    fetch('data/nodes2.csv').then(r => r.text()),
-                    fetch('data/edges1.csv').then(r => r.text()),
-                    fetch('data/edges2.csv').then(r => r.text()),
-                    fetch('data/virtical.csv').then(r => r.text())
-                ]);
-
-                // 解析数据
-                parseNodesData(nodes1Text, 1);
-                parseNodesData(nodes2Text, 2);
-                parseEdgesData(edges1Text, 1);
-                parseEdgesData(edges2Text, 2);
-                parseVirtualData(virticalText);
-
-                console.log('数据加载完成:');
-                console.log('- 一楼节点:', pointsFloor1.length);
-                console.log('- 二楼节点:', pointsFloor2.length);
-                console.log('- 一楼路径:', pathsFloor1.length);
-                console.log('- 二楼路径:', pathsFloor2.length);
-                console.log('- 跨楼层连接:', virtualConnections.length);
+                // 先尝试后端API获取数据
+                const apiAvailable = await checkBackendAPI();
+                
+                if (apiAvailable) {
+                    // 后端API可用，加载数据
+                    const [points1Res, points2Res, connectionsRes] = await Promise.all([
+                        fetch(`${API_BASE_URL}/api/points?floor=1`).then(r => r.json()),
+                        fetch(`${API_BASE_URL}/api/points?floor=2`).then(r => r.json()),
+                        fetch(`${API_BASE_URL}/api/connections`).then(r => r.json())
+                    ]);
+                    
+                    // 检查后端是否返回了完整数据（包含坐标）
+                    const hasCoordinates = points1Res.points.length > 0 && 
+                                          points1Res.points[0].hasOwnProperty('px') && 
+                                          points1Res.points[0].px !== undefined &&
+                                          points1Res.points[0].px !== 0;
+                    
+                    if (!hasCoordinates) {
+                        // 后端数据不完整，降级到本地CSV
+                        console.log('后端数据不完整，降级到本地CSV');
+                        throw new Error('Backend data missing coordinates');
+                    }
+                    
+                    // 转换数据格式
+                    pointsFloor1 = points1Res.points.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        floor: 1,
+                        px: p.px,
+                        py: p.py,
+                        isfloor: p.isfloor || 0,
+                        type: inferType(p.name),
+                        isPopular: POPULAR_LOCATIONS.includes(p.name)
+                    }));
+                    
+                    pointsFloor2 = points2Res.points.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        floor: 2,
+                        px: p.px,
+                        py: p.py,
+                        isfloor: p.isfloor || 0,
+                        type: inferType(p.name),
+                        isPopular: POPULAR_LOCATIONS.includes(p.name)
+                    }));
+                    
+                    virtualConnections = connectionsRes.connections.map(c => ({
+                        node: c.floor1,
+                        distance: c.distance || 5,
+                        type: 'stair'
+                    }));
+                    
+                    console.log('数据加载完成（从后端API）:', pointsFloor1.length + pointsFloor2.length, '个节点');
+                
+                } else {
+                    // 后端API不可用，加载本地CSV文件
+                    console.log('后端API不可用，加载本地CSV数据...');
+                    
+                    const [nodes1Text, nodes2Text, edges1Text, edges2Text, virticalText] = await Promise.all([
+                        fetch('data/nodes1.csv').then(r => r.text()),
+                        fetch('data/nodes2.csv').then(r => r.text()),
+                        fetch('data/edges1.csv').then(r => r.text()),
+                        fetch('data/edges2.csv').then(r => r.text()),
+                        fetch('data/virtical.csv').then(r => r.text())
+                    ]);
+                    
+                    // 解析数据
+                    parseNodesData(nodes1Text, 1);
+                    parseNodesData(nodes2Text, 2);
+                    parseEdgesData(edges1Text, 1);
+                    parseEdgesData(edges2Text, 2);
+                    parseVirtualData(virticalText);
+                    
+                    console.log('数据加载完成（从本地CSV）:', pointsFloor1.length + pointsFloor2.length, '个节点');
+                }
 
                 setupSearchInputs();
                 renderPoints();
@@ -1449,8 +1517,38 @@
             };
         }
 
-        // 计算路径
-        function calculatePath() {
+        // API配置
+        const API_BASE_URL = '';  // 空字符串表示同源，也可以设置为 'http://localhost:8080'
+        
+        // 调用后端API进行路径规划
+        async function callBackendAPI(startName, startFloor, endName) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/path`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        start: startName,
+                        start_floor: startFloor,
+                        end: endName
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('调用后端API失败:', error);
+                return null;
+            }
+        }
+        
+        // 计算路径（优先使用后端API）
+        async function calculatePath() {
             clearPath();
             
             if (!currentStartId) {
@@ -1468,7 +1566,44 @@
                 return;
             }
             
-            const path = dijkstraCrossFloor(currentStartId, currentStartFloor, currentEndId);
+            // 获取起点和终点名称
+            const allPoints = getAllPoints();
+            const startPoint = allPoints.find(p => p.id === currentStartId && p.floor === currentStartFloor);
+            const endPoint = allPoints.find(p => p.id === currentEndId);
+            
+            if (!startPoint || !endPoint) {
+                alert('找不到起点或终点！');
+                return;
+            }
+            
+            // 尝试调用后端API
+            const apiResult = await callBackendAPI(startPoint.name, currentStartFloor, endPoint.name);
+            
+            let path;
+            if (apiResult && apiResult.path && apiResult.path.length > 0) {
+                // 后端API成功，使用后端返回的路径
+                console.log('使用后端API路径规划');
+                path = apiResult.path.map(seg => ({
+                    id: seg.from,
+                    floor: seg.from_floor,
+                    edge: {
+                        target: seg.to,
+                        distance: seg.distance,
+                        floor: seg.to_floor
+                    }
+                }));
+                // 添加终点
+                const lastSeg = apiResult.path[apiResult.path.length - 1];
+                path.push({
+                    id: lastSeg.to,
+                    floor: lastSeg.to_floor,
+                    edge: null
+                });
+            } else {
+                // 后端API失败，使用前端JS算法
+                console.log('后端API不可用，使用前端JS路径规划');
+                path = dijkstraCrossFloor(currentStartId, currentStartFloor, currentEndId);
+            }
             
             if (!path || path.length === 0) {
                 alert('无法找到路径！请确保起点和终点之间存在有效路径。');
@@ -1675,27 +1810,68 @@
         }
 
         function addDragListeners() {
+            // 防止重复绑定
+            if (isDragListenersAdded) {
+                return;
+            }
+            isDragListenersAdded = true;
+            
             const wrapper = document.getElementById('map-wrapper');
             
-            wrapper.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (isDragging) {
-                    offsetX = e.clientX - dragStart.x;
-                    offsetY = e.clientY - dragStart.y;
-                    updateTransform();
+            // 鼠标按下事件
+            const handleMouseDown = (e) => {
+                // 检查是否点击了marker（点标记），如果是则不触发拖动
+                const target = e.target;
+                if (target.classList.contains('point-marker') || target.closest('.point-marker')) {
+                    return; // 不启动拖动
                 }
-            });
-
-            document.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-
-            wrapper.addEventListener('wheel', (e) => {
+                
+                // 阻止事件冒泡，避免触发其他交互
                 e.preventDefault();
+                e.stopPropagation();
+                
+                isDragging = true;
+                // 记录拖动起始点（相对于容器的坐标）
+                const rect = wrapper.getBoundingClientRect();
+                dragStart = { 
+                    x: e.clientX - rect.left - offsetX, 
+                    y: e.clientY - rect.top - offsetY 
+                };
+            };
+            
+            // 鼠标移动事件
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const rect = wrapper.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                
+                // 计算新的偏移量
+                offsetX = currentX - dragStart.x;
+                offsetY = currentY - dragStart.y;
+                
+                updateTransform();
+            };
+            
+            // 鼠标释放事件
+            const handleMouseUp = () => {
+                isDragging = false;
+            };
+            
+            // 鼠标离开窗口事件
+            const handleMouseLeave = () => {
+                isDragging = false;
+            };
+            
+            // 滚轮缩放事件
+            const handleWheel = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
                 const delta = e.deltaY > 0 ? -0.1 : 0.1;
                 const newScale = Math.max(0.2, Math.min(3, scale + delta));
                 
@@ -1709,7 +1885,95 @@
                 scale = newScale;
                 updateTransform();
                 updateZoomDisplay();
-            });
+            };
+            
+            // 触摸开始事件
+            const handleTouchStart = (e) => {
+                if (e.touches.length !== 1) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                isDragging = true;
+                const touch = e.touches[0];
+                const rect = wrapper.getBoundingClientRect();
+                dragStart = { 
+                    x: touch.clientX - rect.left - offsetX, 
+                    y: touch.clientY - rect.top - offsetY 
+                };
+            };
+            
+            // 触摸移动事件
+            const handleTouchMove = (e) => {
+                if (!isDragging || e.touches.length !== 1) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const touch = e.touches[0];
+                const rect = wrapper.getBoundingClientRect();
+                const currentX = touch.clientX - rect.left;
+                const currentY = touch.clientY - rect.top;
+                
+                offsetX = currentX - dragStart.x;
+                offsetY = currentY - dragStart.y;
+                
+                updateTransform();
+            };
+            
+            // 触摸结束事件
+            const handleTouchEnd = () => {
+                isDragging = false;
+            };
+            
+            // 绑定事件
+            wrapper.addEventListener('mousedown', handleMouseDown);
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.addEventListener('mouseleave', handleMouseLeave);
+            wrapper.addEventListener('wheel', handleWheel, { passive: false });
+            
+            // 触摸事件支持
+            wrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
+            
+            // 存储引用以便解绑
+            wrapper._dragListeners = {
+                handleMouseDown,
+                handleMouseMove,
+                handleMouseUp,
+                handleMouseLeave,
+                handleWheel,
+                handleTouchStart,
+                handleTouchMove,
+                handleTouchEnd
+            };
+        }
+        
+        // 移除拖动监听（用于清理）
+        function removeDragListeners() {
+            if (!isDragListenersAdded) {
+                return;
+            }
+            
+            const wrapper = document.getElementById('map-wrapper');
+            const listeners = wrapper._dragListeners;
+            
+            if (listeners) {
+                wrapper.removeEventListener('mousedown', listeners.handleMouseDown);
+                document.removeEventListener('mousemove', listeners.handleMouseMove);
+                document.removeEventListener('mouseup', listeners.handleMouseUp);
+                document.removeEventListener('mouseleave', listeners.handleMouseLeave);
+                wrapper.removeEventListener('wheel', listeners.handleWheel);
+                wrapper.removeEventListener('touchstart', listeners.handleTouchStart);
+                document.removeEventListener('touchmove', listeners.handleTouchMove);
+                document.removeEventListener('touchend', listeners.handleTouchEnd);
+                
+                delete wrapper._dragListeners;
+            }
+            
+            isDragListenersAdded = false;
         }
 
         function zoomIn() {
