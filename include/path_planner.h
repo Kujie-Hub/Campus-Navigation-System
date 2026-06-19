@@ -42,6 +42,18 @@ struct PathSegment {
         : from_id(f), to_id(t), distance(d), from_floor(ff), to_floor(tf), direction(dir) {}
 };
 
+// 教室导航结果结构体
+struct ClassroomNavigationResult {
+    bool valid;                  // 输入是否有效
+    std::string error_message;   // 错误信息
+    std::string classroom;       // 教室编号
+    int floor;                   // 楼层
+    int room_number;             // 房间号（后两位）
+    std::vector<std::string> recommended_stairs;  // 推荐楼梯口
+    
+    ClassroomNavigationResult() : valid(false), floor(0), room_number(0) {}
+};
+
 class PathPlanner {
 private:
     std::unordered_map<std::string, Point> points_floor1;      // 一楼节点
@@ -93,6 +105,15 @@ public:
     
     // 获取跨楼层节点列表
     std::vector<std::pair<std::string, std::string>> getFloorConnections();
+    
+    // ===== 教室导航功能 =====
+    
+    // 解析教室编号
+    // 输入格式：C5-XXX，其中XXX为三位数字
+    ClassroomNavigationResult parseClassroom(const std::string& classroom_input);
+    
+    // 根据教室编号获取导航信息
+    std::string getClassroomNavigationInfo(const std::string& classroom_input);
 };
 
 #endif // PATH_PLANNER_H

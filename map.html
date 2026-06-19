@@ -700,11 +700,330 @@
             }
             
             .nav-controls {
-                bottom: 16px;
-                right: 16px;
-            }
+            bottom: 16px;
+            right: 16px;
         }
-    </style>
+    }
+
+    /* C5教室导航样式 */
+    .classroom-nav-section {
+        margin-top: 20px;
+        padding: 16px;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-radius: 12px;
+        border: 1px solid #fcd34d;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .section-icon {
+        font-size: 18px;
+    }
+
+    .section-header h3 {
+        font-size: 15px;
+        color: #92400e;
+        margin: 0;
+    }
+
+    .input-hint {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 6px;
+    }
+
+    .classroom-btn {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .classroom-btn:hover {
+        box-shadow: 0 6px 25px rgba(245, 158, 11, 0.45);
+    }
+
+    /* 楼层平面图弹窗样式 */
+    .floor-plan-modal {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 380px;
+        max-height: 500px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        z-index: 1000;
+        overflow: hidden;
+        animation: slideUp 0.3s ease-out;
+        display: none;
+        transition: all 0.3s ease;
+    }
+
+    /* 全屏模式样式 - 放大时覆盖地图区域 */
+    .floor-plan-modal.fullscreen {
+        width: calc(100% - 40px);
+        max-width: 900px;
+        height: calc(100% - 40px);
+        max-height: none;
+        top: 20px;
+        left: 20px;
+        bottom: 20px;
+        z-index: 1001;
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .floor-plan-modal.active {
+        display: block;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .modal-title {
+        font-size: 15px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .modal-controls {
+        display: flex;
+        gap: 8px;
+    }
+
+    .modal-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,0.2);
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .modal-btn:hover {
+        background: rgba(255,255,255,0.3);
+    }
+
+    .modal-content {
+        padding: 12px;
+        position: relative;
+        height: calc(100% - 60px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .floor-image-container-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #f8f9fa;
+        min-height: 0;
+    }
+
+    .floor-image-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .floor-image {
+        display: block;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        transform-origin: center center;
+        max-width: 100%;
+        max-height: 100%;
+        transition: transform 0.3s ease-out;
+        /* 确保图片比例不变，避免变形 */
+        object-fit: contain;
+        /* 移除任何默认边框和背景 */
+        border: none;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+    }
+
+    .floor-image.zoomed {
+        cursor: zoom-out;
+    }
+
+    .zoom-controls {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        background: #f1f3f4;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .zoom-btn {
+        padding: 6px 14px;
+        border: 2px solid #e8ecef;
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+        min-width: 50px;
+    }
+
+    .zoom-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+
+    .zoom-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .zoom-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .classroom-marker {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        background: #ef4444;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3), 0 3px 10px rgba(239, 68, 68, 0.5);
+        animation: pulse-red 1.5s infinite;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .classroom-marker::after {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 8px solid #ef4444;
+    }
+
+    .classroom-marker::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+    }
+
+    .classroom-info {
+        margin-top: 10px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        flex-shrink: 0;
+    }
+
+    .classroom-info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .classroom-info-item:last-child {
+        border-bottom: none;
+    }
+
+    .classroom-info-label {
+        color: #6b7280;
+    }
+
+    .classroom-info-value {
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    .stair-info {
+        margin-top: 8px;
+        padding: 10px;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        flex-shrink: 0;
+    }
+
+    .stair-info-title {
+        font-size: 12px;
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .stair-info-content {
+        font-size: 13px;
+        color: #34495e;
+    }
+
+    .stair-info-content strong {
+        color: #667eea;
+    }
+
+    /* 导航错误提示 */
+    .error-message {
+        padding: 12px;
+        background: rgba(239, 68, 68, 0.1);
+        border-radius: 8px;
+        border-left: 4px solid #ef4444;
+        font-size: 13px;
+        color: #dc2626;
+        margin-top: 12px;
+        display: none;
+    }
+
+    .error-message.active {
+        display: block;
+    }
+
+    .error-message.success {
+        background: rgba(16, 185, 129, 0.1);
+        border-left-color: #10b981;
+        color: #059669;
+    }
+</style>
 </head>
 <body>
     <div class="loading" id="loading">
@@ -761,6 +1080,41 @@
             
             <button class="btn" onclick="calculatePath()">🚀 开始导航</button>
             
+            <!-- C5教室导航模块 -->
+            <div class="classroom-nav-section">
+                <div class="section-header">
+                    <span class="section-icon">📚</span>
+                    <h3>C5教学楼导航</h3>
+                </div>
+                <div class="form-group">
+                    <label for="classroom-start-input">📍 起点位置</label>
+                    <div class="search-container">
+                        <input 
+                            type="text" 
+                            id="classroom-start-input" 
+                            placeholder="输入起点名称..." 
+                            autocomplete="off"
+                        >
+                        <span class="search-icon">🔍</span>
+                        <div class="suggestions" id="classroom-start-suggestions"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="classroom-input">🎯 教室编号</label>
+                    <div class="search-container">
+                        <input 
+                            type="text" 
+                            id="classroom-input" 
+                            placeholder="格式: C5-XXX (如 C5-101)" 
+                            autocomplete="off"
+                        >
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <div class="input-hint">支持格式: C5-XXX（XXX为三位数字，如 C5-105、C5-326）</div>
+                </div>
+                <button class="btn classroom-btn" onclick="navigateToClassroom()">🚀 一键导航到教室</button>
+            </div>
+            
             <div class="path-info" id="path-info">
                 <h3>📍 路径信息</h3>
                 <div class="path-details" id="path-details"></div>
@@ -797,6 +1151,52 @@
     </div>
 
     <div class="tooltip" id="tooltip"></div>
+
+    <!-- C5教学楼楼层平面图弹窗 -->
+    <div class="floor-plan-modal" id="floor-plan-modal">
+        <div class="modal-header">
+            <div class="modal-title">
+                <span>📐</span>
+                <span>C5教学楼 - <span id="modal-floor">1</span>楼平面图</span>
+            </div>
+            <div class="modal-controls">
+                <button class="modal-btn" onclick="toggleFullscreen()" title="全屏显示">⛶</button>
+                <button class="modal-btn" onclick="closeFloorPlanModal()" title="关闭窗口">✕</button>
+            </div>
+        </div>
+        <div class="modal-content">
+            <div class="floor-image-container-wrapper">
+                <div class="floor-image-container" id="floor-image-container">
+                    <img id="floor-image" class="floor-image" src="" alt="楼层平面图">
+                    <div class="classroom-marker" id="classroom-marker" style="display: none;"></div>
+                </div>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="setZoom(0.25)">25%</button>
+                    <button class="zoom-btn" onclick="setZoom(0.5)">50%</button>
+                    <button class="zoom-btn active" onclick="setZoom(1)">100%</button>
+                    <button class="zoom-btn" onclick="setZoom(2)">200%</button>
+                </div>
+            </div>
+            <div class="classroom-info" id="classroom-info">
+                <div class="classroom-info-item">
+                    <span class="classroom-info-label">教室编号</span>
+                    <span class="classroom-info-value" id="info-classroom">-</span>
+                </div>
+                <div class="classroom-info-item">
+                    <span class="classroom-info-label">所在楼层</span>
+                    <span class="classroom-info-value" id="info-floor">-</span>
+                </div>
+                <div class="classroom-info-item">
+                    <span class="classroom-info-label">房间号</span>
+                    <span class="classroom-info-value" id="info-room">-</span>
+                </div>
+            </div>
+            <div class="stair-info" id="stair-info">
+                <div class="stair-info-title">🚶 推荐路线</div>
+                <div class="stair-info-content" id="stair-content">请选择教室查看推荐路线</div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // 全局数据结构
@@ -1084,9 +1484,17 @@
             const endInput = document.getElementById('end-input');
             const startSuggestions = document.getElementById('start-suggestions');
             const endSuggestions = document.getElementById('end-suggestions');
-
+            
+            // 主导航模块的起点和终点输入框
             setupSearchInput(startInput, startSuggestions, 'start');
             setupSearchInput(endInput, endSuggestions, 'end');
+            
+            // 教室导航模块的起点输入框
+            const classroomStartInput = document.getElementById('classroom-start-input');
+            const classroomStartSuggestions = document.getElementById('classroom-start-suggestions');
+            if (classroomStartInput && classroomStartSuggestions) {
+                setupSearchInput(classroomStartInput, classroomStartSuggestions, 'classroom-start');
+            }
         }
 
         // 设置搜索输入框事件
@@ -1200,15 +1608,44 @@
             const floor = parseInt(item.dataset.floor);
             const name = item.dataset.name;
             
-            const input = document.getElementById(type === 'start' ? 'start-input' : 'end-input');
-            const suggestions = document.getElementById(type === 'start' ? 'start-suggestions' : 'end-suggestions');
+            let input, suggestions;
+            
+            // 根据类型设置对应的输入框和建议框
+            if (type === 'start') {
+                input = document.getElementById('start-input');
+                suggestions = document.getElementById('start-suggestions');
+            } else if (type === 'classroom-start') {
+                input = document.getElementById('classroom-start-input');
+                suggestions = document.getElementById('classroom-start-suggestions');
+            } else {
+                input = document.getElementById('end-input');
+                suggestions = document.getElementById('end-suggestions');
+            }
             
             input.value = name;
             suggestions.classList.remove('active');
             
-            if (type === 'start') {
+            // 设置起点（包括教室导航模块的起点）
+            if (type === 'start' || type === 'classroom-start') {
                 currentStartId = id;
                 currentStartFloor = floor;
+                
+                // 如果是教室导航模块的起点，同步到主导航模块
+                if (type === 'classroom-start') {
+                    const mainStartInput = document.getElementById('start-input');
+                    mainStartInput.value = name;
+                    
+                    // 高亮显示起点标记
+                    const markers = document.querySelectorAll('.point-marker');
+                    markers.forEach(marker => {
+                        if (marker.dataset.id === id) {
+                            marker.classList.remove('normal', 'floor-1', 'floor-2', 'end');
+                            marker.classList.add('start');
+                        }
+                    });
+                }
+                
+                console.log(`[导航] 起点已设置: ${name}, ID: ${id}, 楼层: ${floor}`);
             } else {
                 currentEndId = id;
             }
@@ -2020,6 +2457,932 @@
         // 页面加载完成后初始化
         document.getElementById('campus-map').addEventListener('load', initMap);
         loadData();
+        
+        // 页面加载完成后预加载楼层平面图
+        window.addEventListener('load', function() {
+            setTimeout(preloadFloorPlanImages, 2000); // 延迟2秒后预加载，避免影响主流程
+        });
+
+        // ============ C5教室导航功能（整合版） ============
+        // 说明：本模块将教室导航与校园导航系统整合，实现从用户位置到目标教室的完整导航流程
+        
+        // 教室位置映射数据（相对楼层平面图的百分比位置）
+        const CLASSROOM_POSITIONS = {
+            1: {
+                // 一楼教室位置 (x%, y%)
+                '1': { x: 15, y: 25 }, '2': { x: 20, y: 25 }, '3': { x: 25, y: 25 }, '4': { x: 30, y: 25 }, '5': { x: 35, y: 25 },
+                '6': { x: 45, y: 25 }, '7': { x: 50, y: 25 }, '8': { x: 55, y: 25 }, '9': { x: 60, y: 25 },
+                '10': { x: 70, y: 25 }, '11': { x: 75, y: 25 },
+                '12': { x: 85, y: 30 }, '13': { x: 85, y: 38 }, '14': { x: 85, y: 46 }, '15': { x: 85, y: 54 }, '16': { x: 85, y: 62 }, '17': { x: 85, y: 70 }, '18': { x: 85, y: 78 },
+                '19': { x: 70, y: 85 }, '20': { x: 65, y: 85 }, '21': { x: 60, y: 85 }, '22': { x: 55, y: 85 },
+                '23': { x: 35, y: 85 }, '24': { x: 30, y: 85 }, '25': { x: 25, y: 85 }, '26': { x: 20, y: 85 }, '27': { x: 15, y: 85 }, '28': { x: 10, y: 85 }, '29': { x: 5, y: 85 }, '30': { x: 5, y: 75 }, '31': { x: 5, y: 65 }
+            },
+            2: {
+                // 二楼教室位置
+                '1': { x: 12, y: 20 }, '2': { x: 17, y: 20 }, '3': { x: 22, y: 20 }, '4': { x: 27, y: 20 }, '5': { x: 32, y: 20 },
+                '6': { x: 37, y: 20 }, '7': { x: 42, y: 20 }, '8': { x: 47, y: 20 }, '9': { x: 52, y: 20 }, '10': { x: 57, y: 20 },
+                '11': { x: 62, y: 20 }, '12': { x: 67, y: 20 }, '13': { x: 72, y: 20 }, '14': { x: 77, y: 20 },
+                '15': { x: 85, y: 25 }, '16': { x: 85, y: 33 }, '17': { x: 85, y: 41 }, '18': { x: 85, y: 49 }, '19': { x: 85, y: 57 }, '20': { x: 85, y: 65 }, '21': { x: 85, y: 73 }, '22': { x: 85, y: 81 },
+                '23': { x: 75, y: 88 }, '24': { x: 70, y: 88 }, '25': { x: 65, y: 88 }, '26': { x: 60, y: 88 }, '27': { x: 55, y: 88 }, '28': { x: 50, y: 88 }, '29': { x: 45, y: 88 },
+                '30': { x: 35, y: 88 }, '31': { x: 30, y: 88 },
+                '32': { x: 18, y: 88 }, '33': { x: 13, y: 88 }, '34': { x: 8, y: 88 }, '35': { x: 3, y: 88 }, '36': { x: 3, y: 80 }, '37': { x: 3, y: 72 }, '38': { x: 3, y: 64 }, '39': { x: 3, y: 56 }, '40': { x: 3, y: 48 }, '41': { x: 3, y: 40 }, '42': { x: 3, y: 32 }, '43': { x: 3, y: 24 }, '44': { x: 8, y: 20 },
+                '45': { x: 25, y: 45 }, '46': { x: 25, y: 55 }, '47': { x: 25, y: 65 }, '48': { x: 25, y: 75 }, '49': { x: 30, y: 45 }, '50': { x: 30, y: 55 }
+            },
+            3: {
+                // 三楼教室位置
+                '1': { x: 10, y: 20 }, '2': { x: 15, y: 20 }, '3': { x: 20, y: 20 }, '4': { x: 25, y: 20 }, '5': { x: 30, y: 20 },
+                '6': { x: 35, y: 20 }, '7': { x: 40, y: 20 }, '8': { x: 45, y: 20 }, '9': { x: 50, y: 20 }, '10': { x: 55, y: 20 },
+                '11': { x: 60, y: 20 }, '12': { x: 65, y: 20 }, '13': { x: 70, y: 20 }, '14': { x: 75, y: 20 },
+                '16': { x: 85, y: 25 }, '17': { x: 85, y: 35 }, '18': { x: 85, y: 45 }, '19': { x: 85, y: 55 },
+                '20': { x: 70, y: 65 }, '21': { x: 65, y: 65 }, '22': { x: 60, y: 65 }, '23': { x: 55, y: 65 }, '24': { x: 50, y: 65 }, '25': { x: 45, y: 65 },
+                '26': { x: 35, y: 75 }, '27': { x: 30, y: 75 }, '28': { x: 25, y: 75 }, '29': { x: 20, y: 75 }, '30': { x: 15, y: 75 }, '31': { x: 10, y: 75 },
+                '32': { x: 5, y: 75 }, '33': { x: 5, y: 65 }, '34': { x: 5, y: 55 }, '35': { x: 5, y: 45 }, '36': { x: 5, y: 35 }, '37': { x: 5, y: 25 }, '38': { x: 10, y: 20 }, '39': { x: 15, y: 20 }, '40': { x: 20, y: 20 },
+                '41': { x: 45, y: 85 }, '42': { x: 50, y: 85 },
+                '43': { x: 60, y: 85 }, '44': { x: 65, y: 85 }, '45': { x: 70, y: 85 }, '46': { x: 75, y: 85 }, '47': { x: 80, y: 85 }, '48': { x: 85, y: 85 }, '49': { x: 85, y: 75 }, '50': { x: 85, y: 65 }, '51': { x: 85, y: 55 }, '52': { x: 85, y: 45 }, '53': { x: 85, y: 35 }, '54': { x: 85, y: 25 }, '55': { x: 80, y: 20 }, '56': { x: 75, y: 20 },
+                '57': { x: 25, y: 40 }, '58': { x: 25, y: 50 }, '59': { x: 25, y: 60 }, '60': { x: 30, y: 40 }, '61': { x: 30, y: 50 }, '62': { x: 30, y: 60 }, '63': { x: 35, y: 40 }, '64': { x: 35, y: 50 }, '65': { x: 35, y: 60 }, '66': { x: 40, y: 40 }, '67': { x: 40, y: 50 }, '68': { x: 40, y: 60 }, '69': { x: 45, y: 40 }
+            },
+            4: {
+                // 四楼教室位置（与三楼相同）
+                '1': { x: 10, y: 20 }, '2': { x: 15, y: 20 }, '3': { x: 20, y: 20 }, '4': { x: 25, y: 20 }, '5': { x: 30, y: 20 },
+                '6': { x: 35, y: 20 }, '7': { x: 40, y: 20 }, '8': { x: 45, y: 20 }, '9': { x: 50, y: 20 }, '10': { x: 55, y: 20 },
+                '11': { x: 60, y: 20 }, '12': { x: 65, y: 20 }, '13': { x: 70, y: 20 }, '14': { x: 75, y: 20 },
+                '16': { x: 85, y: 25 }, '17': { x: 85, y: 35 }, '18': { x: 85, y: 45 }, '19': { x: 85, y: 55 },
+                '20': { x: 70, y: 65 }, '21': { x: 65, y: 65 }, '22': { x: 60, y: 65 }, '23': { x: 55, y: 65 }, '24': { x: 50, y: 65 }, '25': { x: 45, y: 65 },
+                '26': { x: 35, y: 75 }, '27': { x: 30, y: 75 }, '28': { x: 25, y: 75 }, '29': { x: 20, y: 75 }, '30': { x: 15, y: 75 }, '31': { x: 10, y: 75 },
+                '32': { x: 5, y: 75 }, '33': { x: 5, y: 65 }, '34': { x: 5, y: 55 }, '35': { x: 5, y: 45 }, '36': { x: 5, y: 35 }, '37': { x: 5, y: 25 }, '38': { x: 10, y: 20 }, '39': { x: 15, y: 20 }, '40': { x: 20, y: 20 },
+                '41': { x: 45, y: 85 }, '42': { x: 50, y: 85 },
+                '43': { x: 60, y: 85 }, '44': { x: 65, y: 85 }, '45': { x: 70, y: 85 }, '46': { x: 75, y: 85 }, '47': { x: 80, y: 85 }, '48': { x: 85, y: 85 }, '49': { x: 85, y: 75 }, '50': { x: 85, y: 65 }, '51': { x: 85, y: 55 }, '52': { x: 85, y: 45 }, '53': { x: 85, y: 35 }, '54': { x: 85, y: 25 }, '55': { x: 80, y: 20 }, '56': { x: 75, y: 20 },
+                '57': { x: 25, y: 40 }, '58': { x: 25, y: 50 }, '59': { x: 25, y: 60 }, '60': { x: 30, y: 40 }, '61': { x: 30, y: 50 }, '62': { x: 30, y: 60 }, '63': { x: 35, y: 40 }, '64': { x: 35, y: 50 }, '65': { x: 35, y: 60 }, '66': { x: 40, y: 40 }, '67': { x: 40, y: 50 }, '68': { x: 40, y: 60 }, '69': { x: 45, y: 40 }
+            },
+            5: {
+                // 五楼教室位置（与三四楼类似，但有额外房间）
+                '1': { x: 10, y: 20 }, '2': { x: 15, y: 20 }, '3': { x: 20, y: 20 }, '4': { x: 25, y: 20 }, '5': { x: 30, y: 20 },
+                '6': { x: 35, y: 20 }, '7': { x: 40, y: 20 }, '8': { x: 45, y: 20 }, '9': { x: 50, y: 20 }, '10': { x: 55, y: 20 },
+                '11': { x: 60, y: 20 }, '12': { x: 65, y: 20 }, '13': { x: 70, y: 20 }, '14': { x: 75, y: 20 },
+                '16': { x: 85, y: 25 }, '17': { x: 85, y: 35 }, '18': { x: 85, y: 45 }, '19': { x: 85, y: 55 },
+                '20': { x: 70, y: 65 }, '21': { x: 65, y: 65 }, '22': { x: 60, y: 65 }, '23': { x: 55, y: 65 }, '24': { x: 50, y: 65 }, '25': { x: 45, y: 65 },
+                '26': { x: 35, y: 75 }, '27': { x: 30, y: 75 }, '28': { x: 25, y: 75 }, '29': { x: 20, y: 75 }, '30': { x: 15, y: 75 }, '31': { x: 10, y: 75 },
+                '32': { x: 5, y: 75 }, '33': { x: 5, y: 65 }, '34': { x: 5, y: 55 }, '35': { x: 5, y: 45 }, '36': { x: 5, y: 35 }, '37': { x: 5, y: 25 }, '38': { x: 10, y: 20 }, '39': { x: 15, y: 20 }, '40': { x: 20, y: 20 },
+                '41': { x: 45, y: 85 }, '42': { x: 50, y: 85 },
+                '43': { x: 60, y: 85 }, '44': { x: 65, y: 85 }, '45': { x: 70, y: 85 }, '46': { x: 75, y: 85 }, '47': { x: 80, y: 85 }, '48': { x: 85, y: 85 }, '49': { x: 85, y: 75 }, '50': { x: 85, y: 65 }, '51': { x: 85, y: 55 }, '52': { x: 85, y: 45 }, '53': { x: 85, y: 35 }, '54': { x: 85, y: 25 }, '55': { x: 80, y: 20 }, '56': { x: 75, y: 20 },
+                '57': { x: 22, y: 40 }, '58': { x: 22, y: 48 }, '59': { x: 22, y: 56 }, '60': { x: 22, y: 64 },
+                '61': { x: 28, y: 40 }, '62': { x: 28, y: 48 }, '63': { x: 28, y: 56 }, '64': { x: 28, y: 64 },
+                '65': { x: 34, y: 40 }, '66': { x: 34, y: 48 }, '67': { x: 34, y: 56 }, '68': { x: 34, y: 64 },
+                '69': { x: 40, y: 40 }, '70': { x: 40, y: 48 }, '71': { x: 40, y: 56 }, '72': { x: 40, y: 64 }
+            }
+        };
+
+        // 楼梯口显示名称映射
+        const STAIR_NAMES = {
+            'F1': 'F1 楼梯口',
+            'F2': 'F2 楼梯口',
+            'F3': 'F3 楼梯口',
+            'F4': 'F4 楼梯口',
+            'F7': 'F7 楼梯口',
+            'F8': 'F8 楼梯口',
+            'F9': 'F9 楼梯口',
+            'F10': 'F10 楼梯口'
+        };
+
+        // 当前楼层平面图缩放比例
+        let floorPlanZoom = 1;
+        // 当前是否全屏模式
+        let isFullscreen = false;
+
+        // 验证教室编号输入
+        function validateClassroomInput(input) {
+            const trimmed = input.trim().toUpperCase();
+            
+            // 检查格式：C5-XXX
+            const regex = /^C5-\d{3}$/;
+            if (!regex.test(trimmed)) {
+                return {
+                    valid: false,
+                    error: '输入格式错误！正确格式应为 C5-XXX（如 C5-101）'
+                };
+            }
+            
+            // 提取楼层和房间号
+            const numPart = trimmed.substring(3);
+            const floor = parseInt(numPart.charAt(0));
+            const roomNum = parseInt(numPart.substring(1));
+            
+            // 验证楼层范围
+            if (floor < 1 || floor > 5) {
+                return {
+                    valid: false,
+                    error: '楼层编号无效！支持的楼层为 1-5 楼'
+                };
+            }
+            
+            // 验证房间号范围
+            const floorRooms = CLASSROOM_POSITIONS[floor];
+            if (!floorRooms || !floorRooms[roomNum.toString()]) {
+                return {
+                    valid: false,
+                    error: `教室编号 ${trimmed} 不在有效范围内！`
+                };
+            }
+            
+            return {
+                valid: true,
+                classroom: trimmed,
+                floor: floor,
+                roomNumber: roomNum
+            };
+        }
+
+        // 调用后端教室导航API
+        async function callClassroomAPI(classroom) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/classroom`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ classroom: classroom })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('调用教室导航API失败:', error);
+                return null;
+            }
+        }
+
+        /**
+         * 打开楼层平面图弹窗
+         * @param {number} floor - 楼层号 (1-5)
+         * @param {number} roomNumber - 房间号
+         */
+        function openFloorPlanModal(floor, roomNumber) {
+            const modal = document.getElementById('floor-plan-modal');
+            const floorImage = document.getElementById('floor-image');
+            const classroomMarker = document.getElementById('classroom-marker');
+            
+            // 重置全屏状态
+            isFullscreen = false;
+            modal.classList.remove('fullscreen');
+            
+            // 隐藏标记，直到图片加载完成
+            classroomMarker.style.display = 'none';
+            
+            // 设置楼层标题
+            document.getElementById('modal-floor').textContent = floor;
+            
+            // 设置教室信息
+            const classroomCode = `C5-${floor}${String(roomNumber).padStart(2, '0')}`;
+            document.getElementById('info-classroom').textContent = classroomCode;
+            document.getElementById('info-floor').textContent = `${floor}楼`;
+            document.getElementById('info-room').textContent = roomNumber;
+            
+            // 重置缩放
+            floorPlanZoom = 1;
+            updateFloorPlanZoom();
+            
+            // 清除旧的onload回调
+            floorImage.onload = null;
+            
+            // 设置新的图片源
+            const imagePath = `data/C-5-${floor}floor.png`;
+            floorImage.src = imagePath;
+            
+            // 显示弹窗
+            modal.classList.add('active');
+            
+            // 等待图片加载后设置标记位置
+            if (floorImage.complete && floorImage.naturalWidth > 0) {
+                // 图片已在缓存中，直接设置标记
+                updateClassroomMarker(floor, roomNumber);
+            } else {
+                // 图片需要加载
+                floorImage.onload = function() {
+                    console.log(`[教室导航] 图片加载完成: ${imagePath}`);
+                    updateClassroomMarker(floor, roomNumber);
+                };
+            }
+            
+            // 处理图片加载错误
+            floorImage.onerror = function() {
+                console.error(`[教室导航] 图片加载失败: ${imagePath}`);
+                classroomMarker.style.display = 'none';
+            };
+            
+            console.log(`[教室导航] 打开楼层平面图: ${classroomCode}, 楼层: ${floor}, 图片路径: ${imagePath}`);
+        }
+
+        /**
+         * 关闭楼层平面图弹窗
+         */
+        function closeFloorPlanModal() {
+            const modal = document.getElementById('floor-plan-modal');
+            modal.classList.remove('active');
+            modal.classList.remove('fullscreen');
+            isFullscreen = false;
+            console.log('[教室导航] 关闭楼层平面图');
+        }
+        
+        /**
+         * 切换全屏模式
+         */
+        function toggleFullscreen() {
+            const modal = document.getElementById('floor-plan-modal');
+            isFullscreen = !isFullscreen;
+            
+            if (isFullscreen) {
+                modal.classList.add('fullscreen');
+                // 放大到100%以便全屏查看
+                if (floorPlanZoom < 1) {
+                    setZoom(1);
+                }
+                console.log('[教室导航] 切换到全屏模式');
+            } else {
+                modal.classList.remove('fullscreen');
+                console.log('[教室导航] 退出全屏模式');
+            }
+        }
+
+        /**
+         * 更新教室标记位置
+         * 根据教室在楼层平面图上的相对位置，设置标记的绝对位置
+         * @param {number} floor - 楼层号 (1-5)
+         * @param {number} roomNumber - 房间号
+         */
+        function updateClassroomMarker(floor, roomNumber) {
+            const marker = document.getElementById('classroom-marker');
+            const container = document.getElementById('floor-image-container');
+            const floorImage = document.getElementById('floor-image');
+            
+            // 获取该楼层的位置数据
+            const positions = CLASSROOM_POSITIONS[floor];
+            if (!positions) {
+                console.warn(`[教室导航] 未找到楼层 ${floor} 的位置数据`);
+                marker.style.display = 'none';
+                return;
+            }
+            
+            // 获取房间号对应的位置
+            const pos = positions[roomNumber.toString()];
+            if (!pos) {
+                console.warn(`[教室导航] 未找到房间号 ${roomNumber} 在楼层 ${floor} 的位置`);
+                marker.style.display = 'none';
+                return;
+            }
+            
+            // 检查图片是否已加载
+            if (!floorImage.naturalWidth || !floorImage.naturalHeight) {
+                console.warn('[教室导航] 图片未加载完成，无法计算标记位置');
+                marker.style.display = 'none';
+                return;
+            }
+            
+            // 根据百分比位置计算实际像素位置
+            const x = (pos.x / 100) * floorImage.naturalWidth;
+            const y = (pos.y / 100) * floorImage.naturalHeight;
+            
+            // 设置标记位置
+            marker.style.left = x + 'px';
+            marker.style.top = y + 'px';
+            marker.style.display = 'block';
+            
+            console.log(`[教室导航] 教室标记位置已更新: ${floor}楼-${roomNumber}, 位置: (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        }
+
+        /**
+         * 设置楼层平面图缩放级别
+         * @param {number} zoomLevel - 缩放级别 (0.25, 0.5, 1, 2)
+         */
+        function setZoom(zoomLevel) {
+            // 限制缩放范围
+            const minZoom = 0.25;
+            const maxZoom = 2;
+            floorPlanZoom = Math.max(minZoom, Math.min(maxZoom, zoomLevel));
+            
+            updateFloorPlanZoom();
+            
+            // 更新缩放按钮状态
+            document.querySelectorAll('.zoom-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.remove('disabled');
+                const btnZoom = parseFloat(btn.textContent) / 100;
+                if (btnZoom === floorPlanZoom) {
+                    btn.classList.add('active');
+                }
+                // 禁用超出范围的按钮
+                if (btnZoom < minZoom || btnZoom > maxZoom) {
+                    btn.classList.add('disabled');
+                }
+            });
+            
+            console.log(`[教室导航] 缩放级别: ${floorPlanZoom * 100}%`);
+        }
+
+        /**
+         * 更新楼层平面图缩放显示
+         */
+        function updateFloorPlanZoom() {
+            const floorImage = document.getElementById('floor-image');
+            const container = document.getElementById('floor-image-container');
+            
+            // 应用缩放变换
+            floorImage.style.transform = `translate(-50%, -50%) scale(${floorPlanZoom})`;
+            
+            // 如果缩放后超出容器，添加滚动
+            if (floorImage.naturalWidth > 0 && floorImage.naturalHeight > 0) {
+                const containerRect = container.getBoundingClientRect();
+                const scaledWidth = floorImage.naturalWidth * floorPlanZoom;
+                const scaledHeight = floorImage.naturalHeight * floorPlanZoom;
+                
+                container.style.overflow = (scaledWidth > containerRect.width || scaledHeight > containerRect.height) ? 'scroll' : 'hidden';
+            }
+        }
+
+        // 更新楼梯信息显示
+        function updateStairInfo(stairs) {
+            const content = document.getElementById('stair-content');
+            
+            if (stairs && stairs.length > 0) {
+                const stairNames = stairs.map(s => STAIR_NAMES[s] || s).join('、');
+                content.innerHTML = `建议从 <strong>${stairNames}</strong> 上楼，到达${stairs.length > 1 ? '最近的' : ''}楼梯口后，按楼层平面图指引前往教室。`;
+            } else {
+                content.textContent = '请选择教室查看推荐路线';
+            }
+        }
+
+        /**
+         * 教室导航主函数
+         * 整合教室导航与校园导航系统，实现从用户位置到目标教室的完整导航流程
+         * 功能：
+         * 1. 用户输入起点位置
+         * 2. 用户输入教室编号作为终点
+         * 3. 自动计算到教室绑定的两个楼梯口中最近的一个
+         * 4. 一键生成完整的校园导航路径
+         */
+        async function navigateToClassroom() {
+            const classroomInput = document.getElementById('classroom-input');
+            const classroom = classroomInput.value.trim();
+            
+            const startInput = document.getElementById('classroom-start-input');
+            const startValue = startInput.value.trim();
+            
+            // 清除之前的错误提示
+            hideErrorMessage();
+            
+            // 验证教室输入
+            const validation = validateClassroomInput(classroom);
+            if (!validation.valid) {
+                showErrorMessage(validation.error);
+                closeFloorPlanModal();
+                return;
+            }
+            
+            // 验证起点输入
+            if (!startValue) {
+                showErrorMessage('请先输入起点位置！');
+                return;
+            }
+            
+            // 设置起点（优先使用教室导航模块的起点输入）
+            if (!await setClassroomNavigationStart(startValue)) {
+                showErrorMessage('未找到起点位置，请检查输入！');
+                return;
+            }
+            
+            // 调用后端API获取导航信息
+            const apiResult = await callClassroomAPI(classroom);
+            
+            let result;
+            if (apiResult && apiResult.valid) {
+                // 使用后端API结果
+                result = apiResult;
+            } else {
+                // 使用前端验证结果（降级方案）
+                result = {
+                    valid: true,
+                    classroom: validation.classroom,
+                    floor: validation.floor,
+                    room_number: validation.roomNumber,
+                    recommended_stairs: getRecommendedStairs(validation.floor, validation.roomNumber)
+                };
+            }
+            
+            if (!result.valid) {
+                showErrorMessage(result.error || '验证失败');
+                closeFloorPlanModal();
+                return;
+            }
+            
+            // 显示成功提示
+            showErrorMessage('教室导航成功！', true);
+            
+            // 打开楼层平面图弹窗
+            openFloorPlanModal(result.floor, result.room_number);
+            
+            // 更新楼梯信息
+            updateStairInfo(result.recommended_stairs);
+            
+            // 将教室信息同步到终点输入框（建立位置关联）
+            syncClassroomToDestination(result);
+            
+            // 如果用户已选择起点，自动规划到推荐楼梯口的路径
+            if (currentStartId && result.recommended_stairs && result.recommended_stairs.length > 0) {
+                await planRouteToStair(result.recommended_stairs);
+            }
+            
+            console.log(`[教室导航] 导航完成: ${result.classroom}, 起点: ${currentStartId}, 目标楼梯: ${result.recommended_stairs.join(', ')}`);
+        }
+        
+        /**
+         * 设置教室导航的起点位置
+         * 将教室导航模块的起点输入与校园导航系统的起点进行绑定
+         * @param {string} startValue - 起点名称
+         * @returns {boolean} 是否设置成功
+         */
+        async function setClassroomNavigationStart(startValue) {
+            const allPoints = getAllPoints();
+            
+            // 查找匹配的节点
+            const matchedPoint = allPoints.find(p => 
+                p.name.toLowerCase() === startValue.toLowerCase() || 
+                p.id.toLowerCase() === startValue.toLowerCase() ||
+                p.name.toLowerCase().includes(startValue.toLowerCase()) ||
+                p.id.toLowerCase().includes(startValue.toLowerCase())
+            );
+            
+            if (matchedPoint) {
+                // 设置全局起点变量
+                currentStartId = matchedPoint.id;
+                currentStartFloor = matchedPoint.floor;
+                
+                // 同步到主导航模块的起点输入框
+                const mainStartInput = document.getElementById('start-input');
+                mainStartInput.value = matchedPoint.name;
+                
+                // 高亮显示起点标记
+                const markers = document.querySelectorAll('.point-marker');
+                markers.forEach(marker => {
+                    if (marker.dataset.id === matchedPoint.id) {
+                        marker.classList.remove('normal', 'floor-1', 'floor-2', 'end');
+                        marker.classList.add('start');
+                    }
+                });
+                
+                console.log(`[教室导航] 起点已设置: ${matchedPoint.name}, ID: ${matchedPoint.id}, 楼层: ${matchedPoint.floor}`);
+                return true;
+            } else {
+                console.warn(`[教室导航] 未找到起点节点: ${startValue}`);
+                return false;
+            }
+        }
+        
+        /**
+         * 确保起点已正确设置（备用函数）
+         * 检查起点输入框，如果用户输入了起点名称，则查找对应的节点
+         */
+        function ensureStartPointSelected() {
+            const startInput = document.getElementById('start-input');
+            const startValue = startInput.value.trim();
+            
+            if (!startValue) {
+                console.log('[教室导航] 起点未设置，请先选择起点位置');
+                return;
+            }
+            
+            // 如果起点ID为空或与输入不匹配，尝试查找
+            if (!currentStartId || currentStartId !== startValue) {
+                const allPoints = getAllPoints();
+                const matchedPoint = allPoints.find(p => 
+                    p.name === startValue || 
+                    p.id === startValue
+                );
+                
+                if (matchedPoint) {
+                    currentStartId = matchedPoint.id;
+                    currentStartFloor = matchedPoint.floor;
+                    console.log(`[教室导航] 起点已设置: ${matchedPoint.name}, 楼层: ${matchedPoint.floor}`);
+                } else {
+                    console.warn(`[教室导航] 未找到起点节点: ${startValue}`);
+                }
+            }
+        }
+        
+        /**
+         * 将教室信息同步到终点输入框，建立位置数据与教室属性的关联
+         * @param {Object} result - 教室导航结果
+         */
+        function syncClassroomToDestination(result) {
+            if (!result || !result.classroom) return;
+            
+            // 将教室编号设置到终点输入框
+            const endInput = document.getElementById('end-input');
+            endInput.value = result.classroom;
+            
+            // 更新教室信息到路径信息面板
+            updateClassroomPathInfo(result);
+        }
+        
+        /**
+         * 更新路径信息面板中的教室信息
+         * @param {Object} result - 教室导航结果
+         */
+        function updateClassroomPathInfo(result) {
+            const pathInfo = document.getElementById('path-info');
+            const pathDetails = document.getElementById('path-details');
+            
+            // 如果没有路径，显示教室信息
+            if (!currentPath || currentPath.length === 0) {
+                pathDetails.innerHTML = `
+                    <strong>目标教室：</strong>${result.classroom}<br>
+                    <strong>所在楼层：</strong>${result.floor}楼<br>
+                    <strong>推荐楼梯：</strong>${result.recommended_stairs.map(s => STAIR_NAMES[s] || s).join('、')}
+                `;
+                pathInfo.classList.add('active');
+            }
+        }
+
+        // 获取推荐楼梯口（前端备用逻辑）
+        function getRecommendedStairs(floor, roomNumber) {
+            const room = roomNumber;
+            
+            if (floor === 1) {
+                if (room >= 1 && room <= 5) return ['F9', 'F10'];
+                if (room >= 6 && room <= 9) return ['F3', 'F9'];
+                if (room >= 10 && room <= 11) return ['F3', 'F4'];
+                if (room >= 12 && room <= 18) return ['F4', 'F10'];
+                if (room >= 19 && room <= 22) return ['F7', 'F8'];
+                if (room >= 23 && room <= 31) return ['F1', 'F2'];
+            } else if (floor === 2) {
+                if (room >= 1 && room <= 14) return ['F9', 'F10'];
+                if (room >= 15 && room <= 29) return ['F3', 'F4'];
+                if (room >= 30 && room <= 31) return ['F4', 'F8'];
+                if (room >= 32 && room <= 44) return ['F7', 'F8'];
+                if (room >= 45 && room <= 50) return ['F1', 'F2'];
+            } else if (floor === 3 || floor === 4) {
+                if (room >= 1 && room <= 14) return ['F9', 'F10'];
+                if (room >= 16 && room <= 19) return ['F9', 'F7'];
+                if (room >= 20 && room <= 25) return ['F3', 'F7'];
+                if (room >= 26 && room <= 40) return ['F3', 'F4'];
+                if (room >= 41 && room <= 42) return ['F4', 'F8'];
+                if (room >= 43 && room <= 56) return ['F7', 'F8'];
+                if (room >= 57 && room <= 69) return ['F1', 'F2'];
+            } else if (floor === 5) {
+                if (room >= 1 && room <= 14) return ['F9', 'F10'];
+                if (room >= 16 && room <= 19) return ['F9', 'F7'];
+                if (room >= 20 && room <= 25) return ['F3', 'F7'];
+                if (room >= 26 && room <= 40) return ['F3', 'F4'];
+                if (room >= 41 && room <= 42) return ['F4', 'F8'];
+                if (room >= 43 && room <= 56) return ['F7', 'F8'];
+                if (room >= 57 && room <= 72) return ['F1', 'F2'];
+            }
+            
+            return [];
+        }
+
+        // 显示错误信息
+        function showErrorMessage(message, isSuccess = false) {
+            const errorDiv = document.querySelector('.classroom-nav-section .error-message') || createErrorMessageElement();
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+            if (isSuccess) {
+                errorDiv.classList.add('success');
+            } else {
+                errorDiv.classList.remove('success');
+            }
+        }
+
+        // 隐藏错误信息
+        function hideErrorMessage() {
+            const errorDiv = document.querySelector('.classroom-nav-section .error-message');
+            if (errorDiv) {
+                errorDiv.classList.remove('active', 'success');
+            }
+        }
+
+        // 创建错误信息元素（如果不存在）
+        function createErrorMessageElement() {
+            const section = document.querySelector('.classroom-nav-section');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            section.appendChild(errorDiv);
+            return errorDiv;
+        }
+
+        /**
+         * 点击楼层平面图缩放处理
+         * 点击图片区域时放大，点击标记不触发缩放
+         */
+        document.getElementById('floor-image-container').addEventListener('click', function(e) {
+            // 阻止事件冒泡
+            e.stopPropagation();
+            
+            // 点击非标记区域时放大
+            const target = e.target;
+            if (!target.classList.contains('classroom-marker') && 
+                !target.closest('.classroom-marker')) {
+                
+                const currentZoom = floorPlanZoom;
+                const zoomLevels = [0.25, 0.5, 1, 2];
+                const currentIndex = zoomLevels.indexOf(currentZoom);
+                
+                // 找到下一个缩放级别
+                let nextIndex = currentIndex + 1;
+                if (nextIndex >= zoomLevels.length) {
+                    nextIndex = 0; // 循环回最小缩放
+                }
+                
+                setZoom(zoomLevels[nextIndex]);
+                console.log(`[教室导航] 点击放大: ${currentZoom * 100}% -> ${zoomLevels[nextIndex] * 100}%`);
+            }
+        });
+
+        /**
+         * 从当前位置导航到楼梯口
+         * @param {string} stairId - 楼梯口ID
+         */
+        async function navigateToStair(stairId) {
+            // 检查是否有当前位置
+            if (!currentStartId) {
+                console.warn('[教室导航] 未设置起点，无法导航到楼梯口');
+                alert('请先在地图上选择您的当前位置！');
+                return;
+            }
+            
+            // 查找楼梯口节点
+            const allPoints = getAllPoints();
+            const stairPoint = allPoints.find(p => p.id === stairId || p.name === stairId);
+            
+            if (!stairPoint) {
+                console.error(`[教室导航] 未找到楼梯口: ${stairId}`);
+                alert(`未找到楼梯口: ${stairId}`);
+                return;
+            }
+            
+            console.log(`[教室导航] 起点: ${currentStartId}, 终点: ${stairPoint.id}`);
+            
+            // 保存当前终点
+            const originalEndId = currentEndId;
+            
+            // 设置终点为楼梯口
+            currentEndId = stairPoint.id;
+            
+            // 执行路径计算
+            await calculatePath();
+            
+            // 恢复原终点
+            currentEndId = originalEndId;
+            
+            console.log(`[教室导航] 路径计算完成`);
+        }
+
+        /**
+         * 在教室导航成功后，自动规划到推荐楼梯口的路径
+         * 实现自动选择与起点路径最短的楼梯口
+         * @param {Array} stairs - 推荐楼梯口列表
+         */
+        async function planRouteToStair(stairs) {
+            if (!stairs || stairs.length === 0) {
+                console.log('[教室导航] 未找到推荐楼梯口');
+                return;
+            }
+            
+            if (!currentStartId) {
+                console.log('[教室导航] 未设置起点，无法计算最短路径');
+                return;
+            }
+            
+            // 计算从起点到每个推荐楼梯口的最短路径，选择路径最短的楼梯口
+            const stairDistances = [];
+            
+            for (const stairId of stairs) {
+                const distance = await calculateDistanceToStair(stairId);
+                if (distance !== null && distance !== Infinity) {
+                    stairDistances.push({ stairId, distance });
+                }
+            }
+            
+            if (stairDistances.length === 0) {
+                console.warn('[教室导航] 无法计算到任何推荐楼梯口的路径');
+                // 降级到第一个推荐楼梯口
+                highlightStairOnMap(stairs[0]);
+                return;
+            }
+            
+            // 按距离排序，选择最短路径的楼梯口
+            stairDistances.sort((a, b) => a.distance - b.distance);
+            const preferredStair = stairDistances[0].stairId;
+            const shortestDistance = stairDistances[0].distance;
+            
+            console.log(`[教室导航] 楼梯口距离分析:`, stairDistances.map(s => `${s.stairId}: ${s.distance.toFixed(1)}米`).join(', '));
+            console.log(`[教室导航] 选择最短路径楼梯口: ${preferredStair}, 距离: ${shortestDistance.toFixed(1)}米`);
+            
+            // 在地图上高亮显示选中的楼梯口
+            highlightStairOnMap(preferredStair);
+            
+            // 自动计算并显示路径
+            await navigateToStair(preferredStair);
+        }
+        
+        /**
+         * 计算从起点到指定楼梯口的最短距离
+         * @param {string} stairId - 楼梯口ID
+         * @returns {Promise<number|null>} 最短距离，如果无法到达则返回null或Infinity
+         */
+        async function calculateDistanceToStair(stairId) {
+            // 查找楼梯口节点
+            const allPoints = getAllPoints();
+            const stairPoint = allPoints.find(p => p.id === stairId || p.name === stairId);
+            
+            if (!stairPoint) {
+                console.warn(`[教室导航] 未找到楼梯口节点: ${stairId}`);
+                return Infinity;
+            }
+            
+            // 使用Dijkstra算法计算从起点到楼梯口的最短路径
+            const path = dijkstraCrossFloor(currentStartId, currentStartFloor, stairPoint.id);
+            
+            if (!path || path.length === 0) {
+                return Infinity;
+            }
+            
+            // 计算路径总距离
+            let totalDistance = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                if (path[i].edge && path[i].edge.distance) {
+                    totalDistance += path[i].edge.distance;
+                }
+            }
+            
+            return totalDistance;
+        }
+        
+        /**
+         * 在地图上高亮显示楼梯口
+         * @param {string} stairId - 楼梯口ID
+         */
+        function highlightStairOnMap(stairId) {
+            // 清除之前的路径高亮
+            clearPath();
+            
+            // 查找楼梯口节点
+            const allPoints = getAllPoints();
+            const stairPoint = allPoints.find(p => p.id === stairId || p.name === stairId);
+            
+            if (!stairPoint) {
+                console.warn(`[教室导航] 未找到楼梯口节点: ${stairId}`);
+                return;
+            }
+            
+            // 设置终点为楼梯口
+            const endInput = document.getElementById('end-input');
+            const stairDisplayName = STAIR_NAMES[stairId] || stairPoint.name;
+            endInput.value = stairDisplayName;
+            currentEndId = stairPoint.id;
+            
+            // 高亮显示楼梯口标记
+            const markers = document.querySelectorAll('.point-marker');
+            markers.forEach(marker => {
+                // 移除其他标记的end类
+                marker.classList.remove('end');
+                
+                // 为目标楼梯口添加end类
+                if (marker.dataset.id === stairPoint.id) {
+                    marker.classList.remove('normal', 'floor-1', 'floor-2', 'start');
+                    marker.classList.add('end');
+                }
+            });
+            
+            console.log(`[教室导航] 高亮显示楼梯口: ${stairId}, 节点: ${stairPoint.name}, ID: ${stairPoint.id}`);
+        }
+
+        // 教室输入框验证反馈
+        document.getElementById('classroom-input').addEventListener('input', function(e) {
+            const input = e.target.value;
+            const validation = validateClassroomInput(input);
+            
+            // 根据验证结果改变输入框样式
+            if (input.trim()) {
+                if (validation.valid) {
+                    e.target.style.borderColor = '#10b981';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+                } else {
+                    e.target.style.borderColor = '#ef4444';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                }
+            } else {
+                e.target.style.borderColor = '#e8ecef';
+                e.target.style.boxShadow = 'none';
+            }
+        });
+        
+        // ESC键关闭楼层平面图弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('floor-plan-modal');
+                if (modal.classList.contains('active')) {
+                    closeFloorPlanModal();
+                }
+            }
+        });
+        
+        // ============ 测试与调试函数 ============
+        
+        // 预加载所有楼层平面图
+        const preloadedImages = {};
+        function preloadFloorPlanImages() {
+            console.log('[教室导航] 开始预加载楼层平面图...');
+            for (let floor = 1; floor <= 5; floor++) {
+                const img = new Image();
+                img.src = `data/C-5-${floor}floor.png`;
+                img.onload = () => {
+                    preloadedImages[floor] = img;
+                    console.log(`[教室导航] ${floor}楼平面图预加载完成`);
+                };
+                img.onerror = () => {
+                    console.error(`[教室导航] ${floor}楼平面图预加载失败`);
+                };
+            }
+        }
+        
+        /**
+         * 测试教室导航功能
+         * 在控制台运行此函数进行测试
+         */
+        window.testClassroomNavigation = async function() {
+            console.log('========== 教室导航功能测试 ==========');
+            
+            // 1. 检查数据加载
+            console.log('1. 检查数据加载...');
+            console.log(`   一楼节点数: ${pointsFloor1.length}`);
+            console.log(`   二楼节点数: ${pointsFloor2.length}`);
+            console.log(`   一楼路径数: ${pathsFloor1.length}`);
+            console.log(`   二楼路径数: ${pathsFloor2.length}`);
+            console.log(`   跨层连接数: ${virtualConnections.length}`);
+            
+            // 2. 检查楼梯口节点
+            console.log('\n2. 检查楼梯口节点...');
+            const stairs = ['F1', 'F2', 'F3', 'F4', 'F7', 'F8', 'F9', 'F10'];
+            const allPoints = getAllPoints();
+            stairs.forEach(stair => {
+                const found = allPoints.find(p => p.id === stair || p.name === stair);
+                console.log(`   ${stair}: ${found ? '✓ 找到' : '✗ 未找到'}`);
+            });
+            
+            // 3. 测试图片文件
+            console.log('\n3. 测试图片文件...');
+            for (let i = 1; i <= 5; i++) {
+                const img = new Image();
+                img.src = `data/C-5-${i}floor.png`;
+                img.onload = () => console.log(`   ${i}楼平面图: ✓ 加载成功`);
+                img.onerror = () => console.log(`   ${i}楼平面图: ✗ 加载失败`);
+            }
+            
+            // 4. 测试起点设置
+            console.log('\n4. 测试起点设置...');
+            const testStart = 'C-2图书馆';
+            const startPoint = allPoints.find(p => p.name === testStart);
+            if (startPoint) {
+                currentStartId = startPoint.id;
+                currentStartFloor = startPoint.floor;
+                document.getElementById('start-input').value = testStart;
+                console.log(`   起点设置: ✓ ${testStart} (ID: ${currentStartId}, 楼层: ${currentStartFloor})`);
+            } else {
+                console.log(`   起点设置: ✗ 未找到 ${testStart}`);
+            }
+            
+            console.log('\n========== 测试完成 ==========');
+        };
+        
+        /**
+         * 快速测试路径规划
+         */
+        window.testPathPlanning = async function(startName, endName) {
+            console.log(`测试路径规划: ${startName} -> ${endName}`);
+            
+            const allPoints = getAllPoints();
+            const startPoint = allPoints.find(p => p.name === startName);
+            const endPoint = allPoints.find(p => p.name === endName);
+            
+            if (!startPoint || !endPoint) {
+                console.error('起点或终点不存在');
+                return;
+            }
+            
+            // 设置起点和终点
+            currentStartId = startPoint.id;
+            currentStartFloor = startPoint.floor;
+            currentEndId = endPoint.id;
+            
+            document.getElementById('start-input').value = startName;
+            document.getElementById('end-input').value = endName;
+            
+            // 执行路径计算
+            await calculatePath();
+        };
     </script>
 </body>
 </html>

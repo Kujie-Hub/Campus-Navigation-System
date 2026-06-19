@@ -220,6 +220,49 @@ void HttpServer::handleClient(int client_socket) {
             }
         }
         
+    } else if (request.path == "/api/classroom") {
+        // 教室导航
+        std::string classroom = request.params["classroom"];
+        
+        if (classroom.empty()) {
+            // 从请求体获取
+            if (!request.body.empty()) {
+                size_t start_pos = request.body.find("\"classroom\"");
+                if (start_pos != std::string::npos) {
+                    size_t colon = request.body.find(":", start_pos);
+                    size_t quote1 = request.body.find("\"", colon);
+                    size_t quote2 = request.body.find("\"", quote1 + 1);
+                    if (quote1 != std::string::npos && quote2 != std::string::npos) {
+                        classroom = request.body.substr(quote1 + 1, quote2 - quote1 - 1);
+                    }
+                }
+            }
+        }
+        
+        if (classroom.empty()) {
+            response.status_code = 400;
+            response.status_message = "Bad Request";
+            response.body = "{\"error\":\"缺少教室编号参数，格式应为 C5-XXX（如 C5-101）\"}";
+        } else {
+            auto result = planner.parseClassroom(classroom);
+            
+            std::ostringstream oss;
+            if (!result.valid) {
+                oss << "{\"valid\":false,\"error\":\"" << result.error_message << "\"}";
+            } else {
+                oss << "{\"valid\":true,\"classroom\":\"" << result.classroom << "\",";
+                oss << "\"floor\":" << result.floor << ",";
+                oss << "\"room_number\":" << result.room_number << ",";
+                oss << "\"recommended_stairs\":[";
+                for (size_t i = 0; i < result.recommended_stairs.size(); ++i) {
+                    if (i > 0) oss << ",";
+                    oss << "\"" << result.recommended_stairs[i] << "\"";
+                }
+                oss << "]}";
+            }
+            response.body = oss.str();
+        }
+        
     } else if (request.path == "/api/status") {
         // 健康检查
         response.body = "{\"status\":\"ok\",\"service\":\"Campus Navigation API\"}";

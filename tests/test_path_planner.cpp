@@ -199,6 +199,148 @@ void test_path_direction() {
     }
 }
 
+// ===== 教室导航功能测试 =====
+
+// 测试10: 教室编号解析 - 有效输入
+void test_classroom_valid_input() {
+    PathPlanner planner;
+    
+    // 测试1楼
+    auto result = planner.parseClassroom("C5-105");
+    test_result("C5-105 解析有效", result.valid);
+    test_result("C5-105 楼层正确", result.floor == 1);
+    test_result("C5-105 房间号正确", result.room_number == 5);
+    test_result("C5-105 推荐楼梯口正确", result.recommended_stairs.size() == 2 && 
+                result.recommended_stairs[0] == "F9" && result.recommended_stairs[1] == "F10");
+    
+    // 测试2楼
+    result = planner.parseClassroom("C5-215");
+    test_result("C5-215 解析有效", result.valid);
+    test_result("C5-215 楼层正确", result.floor == 2);
+    test_result("C5-215 房间号正确", result.room_number == 15);
+    
+    // 测试3楼
+    result = planner.parseClassroom("C5-326");
+    test_result("C5-326 解析有效", result.valid);
+    test_result("C5-326 楼层正确", result.floor == 3);
+    
+    // 测试5楼
+    result = planner.parseClassroom("C5-572");
+    test_result("C5-572 解析有效", result.valid);
+    test_result("C5-572 楼层正确", result.floor == 5);
+    test_result("C5-572 房间号正确", result.room_number == 72);
+}
+
+// 测试11: 教室编号解析 - 边界值测试
+void test_classroom_boundary_cases() {
+    PathPlanner planner;
+    
+    // 1楼边界值
+    auto result = planner.parseClassroom("C5-105");  // 边界：05
+    test_result("C5-105 (1楼边界05) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-106");  // 边界：06
+    test_result("C5-106 (1楼边界06) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-110");  // 边界：10
+    test_result("C5-110 (1楼边界10) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-111");  // 边界：11
+    test_result("C5-111 (1楼边界11) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-118");  // 边界：18
+    test_result("C5-118 (1楼边界18) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-131");  // 边界：31
+    test_result("C5-131 (1楼边界31) 有效", result.valid);
+    
+    // 5楼边界值（与3-4楼不同）
+    result = planner.parseClassroom("C5-569");  // 3-4楼的边界
+    test_result("C5-569 (5楼69) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-570");  // 5楼特有的范围
+    test_result("C5-570 (5楼70) 有效", result.valid);
+    
+    result = planner.parseClassroom("C5-572");  // 5楼边界：72
+    test_result("C5-572 (5楼边界72) 有效", result.valid);
+}
+
+// 测试12: 教室编号解析 - 无效输入
+void test_classroom_invalid_input() {
+    PathPlanner planner;
+    
+    auto result = planner.parseClassroom("C5-10");   // 位数不足
+    test_result("C5-10 位数不足应无效", !result.valid);
+    
+    result = planner.parseClassroom("C5-1001");  // 位数过多
+    test_result("C5-1001 位数过多应无效", !result.valid);
+    
+    result = planner.parseClassroom("C4-101");   // 错误前缀
+    test_result("C4-101 错误前缀应无效", !result.valid);
+    
+    result = planner.parseClassroom("C5-A01");   // 非数字
+    test_result("C5-A01 非数字应无效", !result.valid);
+    
+    result = planner.parseClassroom("C5-001");   // 楼层为0
+    test_result("C5-001 楼层为0应无效", !result.valid);
+    
+    result = planner.parseClassroom("C5-601");   // 楼层为6（超出范围）
+    test_result("C5-601 楼层为6应无效", !result.valid);
+    
+    result = planner.parseClassroom("C5-132");   // 1楼32号（超出范围）
+    test_result("C5-132 1楼32号应无效", !result.valid);
+    
+    result = planner.parseClassroom("C5-251");   // 2楼51号（超出范围）
+    test_result("C5-251 2楼51号应无效", !result.valid);
+}
+
+// 测试13: 3楼和4楼共用规则验证
+void test_classroom_floor3_and_4() {
+    PathPlanner planner;
+    
+    // 3楼和4楼相同房间号应该得到相同的楼梯口推荐
+    auto result3 = planner.parseClassroom("C5-326");
+    auto result4 = planner.parseClassroom("C5-426");
+    
+    test_result("C5-326 有效", result3.valid);
+    test_result("C5-426 有效", result4.valid);
+    test_result("3楼和4楼同一房间号推荐楼梯口相同", 
+                result3.recommended_stairs == result4.recommended_stairs);
+}
+
+// 测试14: 5楼与3-4楼差异验证
+void test_classroom_floor5_difference() {
+    PathPlanner planner;
+    
+    // 5楼57-72是有效的，3楼相同范围应该无效
+    auto result5 = planner.parseClassroom("C5-570");
+    auto result3 = planner.parseClassroom("C5-370");
+    
+    test_result("C5-570 (5楼70) 有效", result5.valid);
+    test_result("C5-370 (3楼70) 应无效", !result3.valid);
+    
+    // 3-4楼57-69有效，5楼同样有效
+    auto result5_69 = planner.parseClassroom("C5-569");
+    auto result3_69 = planner.parseClassroom("C5-369");
+    
+    test_result("C5-569 有效", result5_69.valid);
+    test_result("C5-369 有效", result3_69.valid);
+}
+
+// 测试15: 导航信息输出
+void test_classroom_navigation_info() {
+    PathPlanner planner;
+    
+    std::string info = planner.getClassroomNavigationInfo("C5-105");
+    test_result("导航信息包含教室编号", info.find("C5-105") != std::string::npos);
+    test_result("导航信息包含楼层", info.find("1楼") != std::string::npos);
+    test_result("导航信息包含楼梯口", info.find("F9") != std::string::npos);
+    
+    // 测试错误信息
+    std::string error_info = planner.getClassroomNavigationInfo("C5-10");
+    test_result("错误输入返回错误信息", error_info.find("[错误]") != std::string::npos);
+}
+
 int main() {
     std::cout << "========================================" << std::endl;
     std::cout << "    校园导航系统 - 单元测试" << std::endl;
@@ -233,6 +375,27 @@ int main() {
     
     std::cout << "--- 路径属性测试 ---" << std::endl;
     test_path_direction();
+    std::cout << std::endl;
+    
+    std::cout << "--- 教室导航功能测试 ---" << std::endl;
+    test_classroom_valid_input();
+    std::cout << std::endl;
+    
+    std::cout << "--- 教室导航边界值测试 ---" << std::endl;
+    test_classroom_boundary_cases();
+    std::cout << std::endl;
+    
+    std::cout << "--- 教室导航无效输入测试 ---" << std::endl;
+    test_classroom_invalid_input();
+    std::cout << std::endl;
+    
+    std::cout << "--- 教室导航楼层规则测试 ---" << std::endl;
+    test_classroom_floor3_and_4();
+    test_classroom_floor5_difference();
+    std::cout << std::endl;
+    
+    std::cout << "--- 教室导航信息输出测试 ---" << std::endl;
+    test_classroom_navigation_info();
     std::cout << std::endl;
     
     std::cout << "========================================" << std::endl;

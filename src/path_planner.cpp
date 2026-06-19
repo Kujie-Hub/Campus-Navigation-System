@@ -447,3 +447,208 @@ std::vector<std::pair<std::string, std::string>> PathPlanner::getFloorConnection
     }
     return connections;
 }
+
+// ===== 教室导航功能实现 =====
+
+// 根据房间号确定1楼推荐楼梯口
+void getFloor1Stairs(int room_number, std::vector<std::string>& stairs) {
+    stairs.clear();
+    if (room_number >= 1 && room_number <= 5) {
+        stairs.push_back("F9");
+        stairs.push_back("F10");
+    } else if (room_number >= 6 && room_number <= 9) {
+        stairs.push_back("F3");
+        stairs.push_back("F9");
+    } else if (room_number >= 10 && room_number <= 11) {
+        stairs.push_back("F3");
+        stairs.push_back("F4");
+    } else if (room_number >= 12 && room_number <= 18) {
+        stairs.push_back("F4");
+        stairs.push_back("F10");
+    } else if (room_number >= 19 && room_number <= 22) {
+        stairs.push_back("F7");
+        stairs.push_back("F8");
+    } else if (room_number >= 23 && room_number <= 31) {
+        stairs.push_back("F1");
+        stairs.push_back("F2");
+    }
+}
+
+// 根据房间号确定2楼推荐楼梯口
+void getFloor2Stairs(int room_number, std::vector<std::string>& stairs) {
+    stairs.clear();
+    if (room_number >= 1 && room_number <= 14) {
+        stairs.push_back("F9");
+        stairs.push_back("F10");
+    } else if (room_number >= 15 && room_number <= 29) {
+        stairs.push_back("F3");
+        stairs.push_back("F4");
+    } else if (room_number >= 30 && room_number <= 31) {
+        stairs.push_back("F4");
+        stairs.push_back("F8");
+    } else if (room_number >= 32 && room_number <= 44) {
+        stairs.push_back("F7");
+        stairs.push_back("F8");
+    } else if (room_number >= 45 && room_number <= 50) {
+        stairs.push_back("F1");
+        stairs.push_back("F2");
+    }
+}
+
+// 根据房间号确定3楼和4楼推荐楼梯口
+void getFloor3And4Stairs(int room_number, std::vector<std::string>& stairs) {
+    stairs.clear();
+    if (room_number >= 1 && room_number <= 14) {
+        stairs.push_back("F9");
+        stairs.push_back("F10");
+    } else if (room_number >= 16 && room_number <= 19) {
+        stairs.push_back("F9");
+        stairs.push_back("F7");
+    } else if (room_number >= 20 && room_number <= 25) {
+        stairs.push_back("F3");
+        stairs.push_back("F7");
+    } else if (room_number >= 26 && room_number <= 40) {
+        stairs.push_back("F3");
+        stairs.push_back("F4");
+    } else if (room_number >= 41 && room_number <= 42) {
+        stairs.push_back("F4");
+        stairs.push_back("F8");
+    } else if (room_number >= 43 && room_number <= 56) {
+        stairs.push_back("F7");
+        stairs.push_back("F8");
+    } else if (room_number >= 57 && room_number <= 69) {
+        stairs.push_back("F1");
+        stairs.push_back("F2");
+    }
+}
+
+// 根据房间号确定5楼推荐楼梯口
+void getFloor5Stairs(int room_number, std::vector<std::string>& stairs) {
+    stairs.clear();
+    if (room_number >= 1 && room_number <= 14) {
+        stairs.push_back("F9");
+        stairs.push_back("F10");
+    } else if (room_number >= 16 && room_number <= 19) {
+        stairs.push_back("F9");
+        stairs.push_back("F7");
+    } else if (room_number >= 20 && room_number <= 25) {
+        stairs.push_back("F3");
+        stairs.push_back("F7");
+    } else if (room_number >= 26 && room_number <= 40) {
+        stairs.push_back("F3");
+        stairs.push_back("F4");
+    } else if (room_number >= 41 && room_number <= 42) {
+        stairs.push_back("F4");
+        stairs.push_back("F8");
+    } else if (room_number >= 43 && room_number <= 56) {
+        stairs.push_back("F7");
+        stairs.push_back("F8");
+    } else if (room_number >= 57 && room_number <= 72) {
+        stairs.push_back("F1");
+        stairs.push_back("F2");
+    }
+}
+
+ClassroomNavigationResult PathPlanner::parseClassroom(const std::string& classroom_input) {
+    ClassroomNavigationResult result;
+    result.classroom = classroom_input;
+    
+    // 验证输入格式：必须以 "C5-" 开头，后面跟着三位数字
+    if (classroom_input.length() != 6) {
+        result.valid = false;
+        result.error_message = "输入格式错误！正确格式应为 C5-XXX（如 C5-101）";
+        return result;
+    }
+    
+    // 检查前缀
+    std::string prefix = classroom_input.substr(0, 3);
+    if (prefix != "C5-") {
+        result.valid = false;
+        result.error_message = "输入格式错误！必须以 C5- 开头（如 C5-101）";
+        return result;
+    }
+    
+    // 提取数字部分
+    std::string num_str = classroom_input.substr(3);
+    
+    // 验证是否为数字
+    for (char c : num_str) {
+        if (!isdigit(c)) {
+            result.valid = false;
+            result.error_message = "教室编号必须为三位数字！";
+            return result;
+        }
+    }
+    
+    int full_number = std::stoi(num_str);
+    
+    // 提取楼层（第一位数字）
+    int floor = full_number / 100;
+    
+    // 提取房间号（后两位）
+    int room_number = full_number % 100;
+    
+    // 验证楼层范围
+    if (floor < 1 || floor > 5) {
+        result.valid = false;
+        result.error_message = "楼层编号无效！支持的楼层为 1-5 楼";
+        return result;
+    }
+    
+    result.floor = floor;
+    result.room_number = room_number;
+    
+    // 根据楼层确定推荐楼梯口
+    switch (floor) {
+        case 1:
+            getFloor1Stairs(room_number, result.recommended_stairs);
+            break;
+        case 2:
+            getFloor2Stairs(room_number, result.recommended_stairs);
+            break;
+        case 3:
+        case 4:
+            getFloor3And4Stairs(room_number, result.recommended_stairs);
+            break;
+        case 5:
+            getFloor5Stairs(room_number, result.recommended_stairs);
+            break;
+    }
+    
+    // 检查是否找到了有效的楼梯口
+    if (result.recommended_stairs.empty()) {
+        result.valid = false;
+        result.error_message = "教室编号 " + classroom_input + " 不在有效范围内！";
+        return result;
+    }
+    
+    result.valid = true;
+    result.error_message = "";
+    return result;
+}
+
+std::string PathPlanner::getClassroomNavigationInfo(const std::string& classroom_input) {
+    ClassroomNavigationResult result = parseClassroom(classroom_input);
+    
+    if (!result.valid) {
+        return "[错误] " + result.error_message;
+    }
+    
+    std::stringstream ss;
+    ss << "===== C5教学楼教室导航 =====" << std::endl;
+    ss << "教室编号: " << result.classroom << std::endl;
+    ss << "所在楼层: " << result.floor << "楼" << std::endl;
+    ss << "房间号: " << result.room_number << std::endl;
+    ss << "推荐楼梯口: ";
+    
+    for (size_t i = 0; i < result.recommended_stairs.size(); ++i) {
+        if (i > 0) {
+            ss << " 和 ";
+        }
+        ss << result.recommended_stairs[i];
+    }
+    ss << std::endl;
+    ss << "=============================" << std::endl;
+    
+    return ss.str();
+}
