@@ -88,6 +88,8 @@ public:
     std::vector<std::string> getPointIdsByFloor(int floor);
     // 获取某楼层的所有节点名称
     std::vector<std::string> getPointNamesByFloor(int floor);
+    // 获取某楼层的所有节点（包含完整信息）
+    std::vector<Point> getAllPointsByFloor(int floor);
     
     // 最优路径搜索（支持跨楼层）
     // start_id: 起点ID, start_floor: 起点楼层(1或2)

@@ -1581,9 +1581,14 @@
             attachSuggestionEvents(suggestions, type);
         }
 
+        // 转义正则表达式特殊字符
+        function escapeRegExp(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
         // 高亮匹配文字
         function highlightMatch(text, query) {
-            const regex = new RegExp(`(${query})`, 'gi');
+            const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
             return text.replace(regex, '<strong style="color: #667eea;">$1</strong>');
         }
 

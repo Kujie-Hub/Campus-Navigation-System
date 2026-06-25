@@ -5,21 +5,59 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <arpa/inet.h>
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #include <windows.h>
+    typedef int socklen_t;
+    typedef int ssize_t;
+    #define CLOSE_SOCKET closesocket
+#else
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    #define CLOSE_SOCKET close
+#endif
 
 HttpServer::HttpServer(int port, const std::string& root_dir)
     : port_(port), running_(false), root_directory_(root_dir) {
+#ifdef _WIN32
+    InitializeCriticalSection(&clients_mutex_);
+
+    // 获取exe文件所在目录作为根目录
+    char module_path[MAX_PATH];
+    GetModuleFileNameA(NULL, module_path, MAX_PATH);
+    std::string exe_path(module_path);
+    size_t last_slash = exe_path.find_last_of("\\/");
+    if (last_slash != std::string::npos) {
+        root_directory_ = exe_path.substr(0, last_slash);
+    } else {
+        root_directory_ = ".";
+    }
+    std::cout << "设置根目录为: " << root_directory_ << std::endl;
+#endif
 }
 
 HttpServer::~HttpServer() {
     stop();
+#ifdef _WIN32
+    DeleteCriticalSection(&clients_mutex_);
+#endif
 }
 
 bool HttpServer::start() {
+#ifdef _WIN32
+    // 初始化 Winsock
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cerr << "Winsock 初始化失败" << std::endl;
+        return false;
+    }
+#endif
+
     // 创建socket
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
@@ -28,7 +66,11 @@ bool HttpServer::start() {
     }
     
     // 设置socket选项，允许地址复用
+#ifdef _WIN32
+    char opt = 1;
+#else
     int opt = 1;
+#endif
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     
     // 绑定地址
@@ -40,14 +82,14 @@ bool HttpServer::start() {
     
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         std::cerr << "绑定端口 " << port_ << " 失败" << std::endl;
-        close(server_fd);
+        CLOSE_SOCKET(server_fd);
         return false;
     }
-    
+
     // 开始监听
     if (listen(server_fd, 10) < 0) {
         std::cerr << "监听失败" << std::endl;
-        close(server_fd);
+        CLOSE_SOCKET(server_fd);
         return false;
     }
     
@@ -69,12 +111,22 @@ bool HttpServer::start() {
         }
         
         // 在新线程中处理客户端
+#ifdef _WIN32
+        ClientContext* ctx = new ClientContext();
+        ctx->server = this;
+        ctx->client_socket = client_socket;
+        EnterCriticalSection(&clients_mutex_);
+        client_sockets_.push_back(client_socket);
+        LeaveCriticalSection(&clients_mutex_);
+        CreateThread(NULL, 0, clientThreadProc, ctx, 0, NULL);
+#else
         std::thread([this, client_socket]() {
             handleClient(client_socket);
         }).detach();
+#endif
     }
     
-    close(server_fd);
+    CLOSE_SOCKET(server_fd);
     return true;
 }
 
@@ -90,16 +142,52 @@ bool HttpServer::isRunning() const {
 }
 
 void HttpServer::handleClient(int client_socket) {
-    char buffer[8192] = {0};
-    ssize_t bytes_read = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+    char buffer[8192];
+    std::string raw_request;
+    ssize_t bytes_read = 0;
     
-    if (bytes_read <= 0) {
-        close(client_socket);
+    // 设置超时
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    
+    // 循环读取完整请求
+    do {
+        memset(buffer, 0, sizeof(buffer));
+        bytes_read = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_read > 0) {
+            raw_request.append(buffer, bytes_read);
+        }
+    } while (bytes_read > 0 && raw_request.size() < 65536);
+    
+    if (raw_request.empty()) {
+        CLOSE_SOCKET(client_socket);
         return;
     }
     
-    std::string raw_request(buffer);
     HttpRequest request = parseRequest(raw_request);
+    
+    // 处理 Expect: 100-continue
+    if (request.headers["expect"] == "100-continue") {
+        std::string continue_response = "HTTP/1.1 100 Continue\r\n\r\n";
+        send(client_socket, continue_response.c_str(), continue_response.size(), 0);
+        
+        // 继续读取请求体
+        std::string body_buffer;
+        bytes_read = 0;
+        do {
+            memset(buffer, 0, sizeof(buffer));
+            bytes_read = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+            if (bytes_read > 0) {
+                body_buffer.append(buffer, bytes_read);
+            }
+        } while (bytes_read > 0 && body_buffer.size() < 65536);
+        
+        if (!body_buffer.empty()) {
+            request.body = body_buffer;
+        }
+    }
     
     HttpResponse response;
     PathPlanner planner;
@@ -112,21 +200,26 @@ void HttpServer::handleClient(int client_socket) {
     
     // API路由
     if (request.path == "/api/points") {
-        // 获取节点列表
+        // 获取节点列表（包含完整坐标信息）
         planner.loadAllData();
         int floor = 1;
         if (request.params.find("floor") != request.params.end()) {
             floor = std::stoi(request.params["floor"]);
         }
-        
-        auto names = planner.getPointNamesByFloor(floor);
-        auto points = planner.getPointIdsByFloor(floor);
-        
+
+        auto allPoints = planner.getAllPointsByFloor(floor);
+
         std::ostringstream oss;
         oss << "{\"floor\":" << floor << ",\"points\":[";
-        for (size_t i = 0; i < names.size(); ++i) {
+        for (size_t i = 0; i < allPoints.size(); ++i) {
             if (i > 0) oss << ",";
-            oss << "{\"id\":\"" << points[i] << "\",\"name\":\"" << names[i] << "\"}";
+            const auto& p = allPoints[i];
+            oss << "{\"id\":\"" << p.id << "\","
+                << "\"name\":\"" << p.name << "\","
+                << "\"floor\":" << p.floor << ","
+                << "\"px\":" << p.px << ","
+                << "\"py\":" << p.py << ","
+                << "\"isfloor\":" << p.isFloor << "}";
         }
         oss << "]}";
         response.body = oss.str();
@@ -309,7 +402,7 @@ void HttpServer::handleClient(int client_socket) {
     }
     
     sendResponse(client_socket, response);
-    close(client_socket);
+    CLOSE_SOCKET(client_socket);
 }
 
 HttpRequest HttpServer::parseRequest(const std::string& raw_request) {
@@ -333,25 +426,33 @@ HttpRequest HttpServer::parseRequest(const std::string& raw_request) {
         request.params = parseParams(request.query);
     }
     
-    // 解析请求头
+    // 解析请求头（忽略大小写）
     while (std::getline(stream, line)) {
-        if (line == "\r" || line.empty()) break;
+        if (line.empty() || (line.size() == 1 && line[0] == '\r')) break;
         
         size_t colon_pos = line.find(':');
         if (colon_pos != std::string::npos) {
             std::string key = line.substr(0, colon_pos);
             std::string value = line.substr(colon_pos + 1);
-            // 去除空格
             value.erase(0, value.find_first_not_of(" \t"));
             value.erase(value.find_last_not_of(" \r") + 1);
+            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
             request.headers[key] = value;
         }
     }
-    
-    // 读取请求体
-    std::ostringstream body_stream;
-    body_stream << stream.rdbuf();
-    request.body = body_stream.str();
+
+    // 读取请求体（从Content-Length获取长度，不区分大小写）
+    std::string content_length = request.headers["content-length"];
+    if (!content_length.empty()) {
+        int len = std::stoi(content_length);
+        if (len > 0) {
+            char* body_buf = new char[len + 1];
+            stream.read(body_buf, len);
+            body_buf[len] = '\0';
+            request.body = std::string(body_buf);
+            delete[] body_buf;
+        }
+    }
     
     return request;
 }
@@ -441,3 +542,24 @@ std::string HttpServer::getMimeType(const std::string& filepath) {
     
     return "application/octet-stream";
 }
+
+#ifdef _WIN32
+// Windows线程入口函数
+DWORD WINAPI HttpServer::clientThreadProc(LPVOID param) {
+    ClientContext* ctx = static_cast<ClientContext*>(param);
+    if (ctx && ctx->server) {
+        ctx->server->handleClient(ctx->client_socket);
+        // 从列表中移除socket
+        EnterCriticalSection(&ctx->server->clients_mutex_);
+        for (auto it = ctx->server->client_sockets_.begin(); it != ctx->server->client_sockets_.end(); ++it) {
+            if (*it == ctx->client_socket) {
+                ctx->server->client_sockets_.erase(it);
+                break;
+            }
+        }
+        LeaveCriticalSection(&ctx->server->clients_mutex_);
+        delete ctx;
+    }
+    return 0;
+}
+#endif

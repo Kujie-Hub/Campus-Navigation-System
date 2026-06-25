@@ -3,6 +3,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <unordered_set>
 
 std::unordered_map<std::string, Point>& PathPlanner::getPointsByFloor(int floor) {
     return floor == 1 ? points_floor1 : points_floor2;
@@ -274,6 +275,15 @@ std::vector<std::string> PathPlanner::getPointNamesByFloor(int floor) {
     return getPointIdsByFloor(floor);
 }
 
+std::vector<Point> PathPlanner::getAllPointsByFloor(int floor) {
+    std::vector<Point> result;
+    auto& points = getPointsByFloor(floor);
+    for (auto& pair : points) {
+        result.push_back(pair.second);
+    }
+    return result;
+}
+
 std::vector<PathSegment> PathPlanner::findShortestPath(const std::string& start_id, int start_floor, const std::string& end_id) {
     std::vector<PathSegment> result;
     
@@ -296,6 +306,8 @@ std::vector<PathSegment> PathPlanner::findShortestPath(const std::string& start_
     pq.push({0, {start_id, start_floor}, {}});
     
     std::unordered_map<std::string, double> best_cost[3]; // 分别用于一楼、二楼
+    std::unordered_set<std::string> visited[3]; // 标记已访问节点
+    
     best_cost[1][start_id] = 0;
     best_cost[2][start_id] = 0;
     
@@ -305,6 +317,12 @@ std::vector<PathSegment> PathPlanner::findShortestPath(const std::string& start_
         
         std::string current_id = current.state.first;
         int current_floor = current.state.second;
+        
+        // 检查是否已经访问过
+        if (visited[current_floor].count(current_id) > 0) {
+            continue;
+        }
+        visited[current_floor].insert(current_id);
         
         // 检查是否到达终点（在任意楼层）
         if (current_id == end_id) {
@@ -325,16 +343,15 @@ std::vector<PathSegment> PathPlanner::findShortestPath(const std::string& start_
                 std::string next_id = edge.target_id;
                 int next_floor = edge.target_floor;
                 
-                // 检查目标节点是否存在
-                auto& target_points = getPointsByFloor(next_floor);
-                if (target_points.find(next_id) == target_points.end() && next_id != current_id) {
+                // 检查是否已访问
+                if (visited[next_floor].count(next_id) > 0) {
                     continue;
                 }
                 
                 double new_cost = current.dist + edge.distance;
                 
-                // 检查是否更优
-                if (new_cost < best_cost[next_floor][next_id]) {
+                // 检查是否更优（包括未访问的情况）
+                if (best_cost[next_floor].count(next_id) == 0 || new_cost < best_cost[next_floor][next_id]) {
                     best_cost[next_floor][next_id] = new_cost;
                     
                     // 创建路径段
