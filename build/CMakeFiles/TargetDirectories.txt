@@ -1,0 +1,3 @@
+E:/Campus Navigation System/Campus Navigation System/build/CMakeFiles/campus_server.dir
+E:/Campus Navigation System/Campus Navigation System/build/CMakeFiles/edit_cache.dir
+E:/Campus Navigation System/Campus Navigation System/build/CMakeFiles/rebuild_cache.dir

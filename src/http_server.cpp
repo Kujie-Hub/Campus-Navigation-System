@@ -27,7 +27,6 @@ HttpServer::HttpServer(int port, const std::string& root_dir)
 #ifdef _WIN32
     InitializeCriticalSection(&clients_mutex_);
 
-    // 获取exe文件所在目录作为根目录
     char module_path[MAX_PATH];
     GetModuleFileNameA(NULL, module_path, MAX_PATH);
     std::string exe_path(module_path);
@@ -37,7 +36,7 @@ HttpServer::HttpServer(int port, const std::string& root_dir)
     } else {
         root_directory_ = ".";
     }
-    std::cout << "设置根目录为: " << root_directory_ << std::endl;
+    std::cout << "Root directory: " << root_directory_ << std::endl;
 #endif
 }
 
@@ -50,22 +49,19 @@ HttpServer::~HttpServer() {
 
 bool HttpServer::start() {
 #ifdef _WIN32
-    // 初始化 Winsock
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Winsock 初始化失败" << std::endl;
+        std::cerr << "Winsock initialization failed" << std::endl;
         return false;
     }
 #endif
 
-    // 创建socket
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
-        std::cerr << "创建socket失败" << std::endl;
+        std::cerr << "Socket creation failed" << std::endl;
         return false;
     }
     
-    // 设置socket选项，允许地址复用
 #ifdef _WIN32
     char opt = 1;
 #else
@@ -73,7 +69,6 @@ bool HttpServer::start() {
 #endif
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     
-    // 绑定地址
     struct sockaddr_in address;
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
@@ -81,23 +76,28 @@ bool HttpServer::start() {
     address.sin_port = htons(port_);
     
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        std::cerr << "绑定端口 " << port_ << " 失败" << std::endl;
+        std::cerr << "Bind to port " << port_ << " failed" << std::endl;
         CLOSE_SOCKET(server_fd);
         return false;
     }
 
-    // 开始监听
     if (listen(server_fd, 10) < 0) {
-        std::cerr << "监听失败" << std::endl;
+        std::cerr << "Listen failed" << std::endl;
         CLOSE_SOCKET(server_fd);
         return false;
     }
     
     running_ = true;
-    std::cout << "HTTP服务器启动成功！" << std::endl;
-    std::cout << "请访问: http://localhost:" << port_ << std::endl;
+    std::cout << "HTTP server started successfully!" << std::endl;
+    std::cout << "Visit: http://localhost:" << port_ << std::endl;
     
-    // 接受连接循环
+#ifdef _WIN32
+    std::string url = "http://localhost:" + std::to_string(port_);
+    std::string cmd = "start " + url;
+    system(cmd.c_str());
+    std::cout << "Browser opened automatically." << std::endl;
+#endif
+    
     while (running_) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
@@ -105,12 +105,11 @@ bool HttpServer::start() {
         int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
         if (client_socket < 0) {
             if (running_) {
-                std::cerr << "接受连接失败" << std::endl;
+                std::cerr << "Accept failed" << std::endl;
             }
             continue;
         }
         
-        // 在新线程中处理客户端
 #ifdef _WIN32
         ClientContext* ctx = new ClientContext();
         ctx->server = this;
@@ -133,7 +132,7 @@ bool HttpServer::start() {
 void HttpServer::stop() {
     if (running_) {
         running_ = false;
-        std::cout << "服务器已停止" << std::endl;
+        std::cout << "Server stopped" << std::endl;
     }
 }
 
@@ -146,13 +145,11 @@ void HttpServer::handleClient(int client_socket) {
     std::string raw_request;
     ssize_t bytes_read = 0;
     
-    // 设置超时
     struct timeval timeout;
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
     setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     
-    // 循环读取完整请求
     do {
         memset(buffer, 0, sizeof(buffer));
         bytes_read = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
@@ -168,12 +165,10 @@ void HttpServer::handleClient(int client_socket) {
     
     HttpRequest request = parseRequest(raw_request);
     
-    // 处理 Expect: 100-continue
     if (request.headers["expect"] == "100-continue") {
         std::string continue_response = "HTTP/1.1 100 Continue\r\n\r\n";
         send(client_socket, continue_response.c_str(), continue_response.size(), 0);
         
-        // 继续读取请求体
         std::string body_buffer;
         bytes_read = 0;
         do {
@@ -192,15 +187,12 @@ void HttpServer::handleClient(int client_socket) {
     HttpResponse response;
     PathPlanner planner;
     
-    // 设置CORS头
     response.headers["Access-Control-Allow-Origin"] = "*";
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
     response.headers["Access-Control-Allow-Headers"] = "Content-Type";
     response.headers["Content-Type"] = "application/json; charset=utf-8";
     
-    // API路由
     if (request.path == "/api/points") {
-        // 获取节点列表（包含完整坐标信息）
         planner.loadAllData();
         int floor = 1;
         if (request.params.find("floor") != request.params.end()) {
@@ -225,7 +217,6 @@ void HttpServer::handleClient(int client_socket) {
         response.body = oss.str();
         
     } else if (request.path == "/api/connections") {
-        // 获取跨楼层连接
         planner.loadAllData();
         auto connections = planner.getFloorConnections();
         
@@ -239,15 +230,12 @@ void HttpServer::handleClient(int client_socket) {
         response.body = oss.str();
         
     } else if (request.path == "/api/path") {
-        // 路径规划
         planner.loadAllData();
         
         std::string start_name, end_name;
         int start_floor = 1;
         
-        // 解析请求体
         if (!request.body.empty()) {
-            // JSON格式: {"start":"E-0食堂","start_floor":1,"end":"C-00食堂"}
             size_t start_pos = request.body.find("\"start\"");
             if (start_pos != std::string::npos) {
                 size_t colon = request.body.find(":", start_pos);
@@ -287,12 +275,12 @@ void HttpServer::handleClient(int client_socket) {
         if (start_name.empty() || end_name.empty()) {
             response.status_code = 400;
             response.status_message = "Bad Request";
-            response.body = "{\"error\":\"缺少参数\"}";
+            response.body = "{\"error\":\"Missing parameters\"}";
         } else {
             auto path = planner.findShortestPathByName(start_name, start_floor, end_name);
             
             if (path.empty()) {
-                response.body = "{\"path\":[],\"distance\":0,\"error\":\"无法找到路径\"}";
+                response.body = "{\"path\":[],\"distance\":0,\"error\":\"No path found\"}";
             } else {
                 double total_distance = planner.getPathDistance(path);
                 
@@ -314,11 +302,9 @@ void HttpServer::handleClient(int client_socket) {
         }
         
     } else if (request.path == "/api/classroom") {
-        // 教室导航
         std::string classroom = request.params["classroom"];
         
         if (classroom.empty()) {
-            // 从请求体获取
             if (!request.body.empty()) {
                 size_t start_pos = request.body.find("\"classroom\"");
                 if (start_pos != std::string::npos) {
@@ -335,7 +321,7 @@ void HttpServer::handleClient(int client_socket) {
         if (classroom.empty()) {
             response.status_code = 400;
             response.status_message = "Bad Request";
-            response.body = "{\"error\":\"缺少教室编号参数，格式应为 C5-XXX（如 C5-101）\"}";
+            response.body = "{\"error\":\"Missing classroom parameter, format should be C5-XXX (e.g. C5-101)\"}";
         } else {
             auto result = planner.parseClassroom(classroom);
             
@@ -357,11 +343,9 @@ void HttpServer::handleClient(int client_socket) {
         }
         
     } else if (request.path == "/api/status") {
-        // 健康检查
         response.body = "{\"status\":\"ok\",\"service\":\"Campus Navigation API\"}";
         
     } else if (request.path == "/" || request.path == "/index.html") {
-        // 返回HTML页面
         std::string html = readFile(root_directory_ + "/map.html");
         if (!html.empty()) {
             response.headers["Content-Type"] = "text/html; charset=utf-8";
@@ -373,7 +357,6 @@ void HttpServer::handleClient(int client_socket) {
         }
         
     } else if (request.path.find("/data/") == 0) {
-        // 静态数据文件
         std::string filepath = root_directory_ + request.path;
         std::string content = readFile(filepath);
         if (!content.empty()) {
@@ -387,7 +370,6 @@ void HttpServer::handleClient(int client_socket) {
         }
         
     } else {
-        // 其他静态文件
         std::string filepath = root_directory_ + request.path;
         std::string content = readFile(filepath);
         if (!content.empty()) {
@@ -411,12 +393,10 @@ HttpRequest HttpServer::parseRequest(const std::string& raw_request) {
     std::istringstream stream(raw_request);
     std::string line;
     
-    // 解析请求行
     if (std::getline(stream, line)) {
         std::istringstream line_stream(line);
         line_stream >> request.method >> request.path;
         
-        // 分离路径和查询参数
         size_t query_pos = request.path.find('?');
         if (query_pos != std::string::npos) {
             request.query = request.path.substr(query_pos + 1);
@@ -426,7 +406,6 @@ HttpRequest HttpServer::parseRequest(const std::string& raw_request) {
         request.params = parseParams(request.query);
     }
     
-    // 解析请求头（忽略大小写）
     while (std::getline(stream, line)) {
         if (line.empty() || (line.size() == 1 && line[0] == '\r')) break;
         
@@ -441,7 +420,6 @@ HttpRequest HttpServer::parseRequest(const std::string& raw_request) {
         }
     }
 
-    // 读取请求体（从Content-Length获取长度，不区分大小写）
     std::string content_length = request.headers["content-length"];
     if (!content_length.empty()) {
         int len = std::stoi(content_length);
@@ -544,22 +522,21 @@ std::string HttpServer::getMimeType(const std::string& filepath) {
 }
 
 #ifdef _WIN32
-// Windows线程入口函数
-DWORD WINAPI HttpServer::clientThreadProc(LPVOID param) {
-    ClientContext* ctx = static_cast<ClientContext*>(param);
-    if (ctx && ctx->server) {
-        ctx->server->handleClient(ctx->client_socket);
-        // 从列表中移除socket
-        EnterCriticalSection(&ctx->server->clients_mutex_);
-        for (auto it = ctx->server->client_sockets_.begin(); it != ctx->server->client_sockets_.end(); ++it) {
-            if (*it == ctx->client_socket) {
-                ctx->server->client_sockets_.erase(it);
-                break;
-            }
-        }
-        LeaveCriticalSection(&ctx->server->clients_mutex_);
-        delete ctx;
+DWORD WINAPI HttpServer::clientThreadProc(LPVOID lpParam) {
+    ClientContext* ctx = reinterpret_cast<ClientContext*>(lpParam);
+    HttpServer* server = ctx->server;
+    int client_socket = ctx->client_socket;
+    delete ctx;
+    
+    server->handleClient(client_socket);
+    
+    EnterCriticalSection(&server->clients_mutex_);
+    auto it = std::find(server->client_sockets_.begin(), server->client_sockets_.end(), client_socket);
+    if (it != server->client_sockets_.end()) {
+        server->client_sockets_.erase(it);
     }
+    LeaveCriticalSection(&server->clients_mutex_);
+    
     return 0;
 }
 #endif

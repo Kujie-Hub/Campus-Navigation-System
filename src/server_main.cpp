@@ -1,25 +1,33 @@
 #include "http_server.h"
 #include <iostream>
 #include <csignal>
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 HttpServer* g_server = nullptr;
 
 void signalHandler(int signum) {
     if (g_server) {
-        std::cout << "\n正在停止服务器..." << std::endl;
+        std::cout << "\nStopping server..." << std::endl;
         g_server->stop();
     }
 }
 
 int main(int argc, char* argv[]) {
-    // 设置信号处理
+#ifdef _WIN32
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+#endif
+
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
     int port = 8080;
     std::string root_dir = ".";
     
-    // 解析命令行参数
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-p" || arg == "--port") {
@@ -31,29 +39,40 @@ int main(int argc, char* argv[]) {
                 root_dir = argv[++i];
             }
         } else if (arg == "-h" || arg == "--help") {
-            std::cout << "用法: server [选项]" << std::endl;
-            std::cout << "选项:" << std::endl;
-            std::cout << "  -p, --port <端口>    设置服务器端口 (默认: 8080)" << std::endl;
-            std::cout << "  -r, --root <目录>   设置静态文件根目录 (默认: 当前目录)" << std::endl;
-            std::cout << "  -h, --help          显示帮助信息" << std::endl;
+            std::cout << "Usage: server [options]" << std::endl;
+            std::cout << "Options:" << std::endl;
+            std::cout << "  -p, --port <port>    Set server port (default: 8080)" << std::endl;
+            std::cout << "  -r, --root <dir>     Set static file root directory (default: current)" << std::endl;
+            std::cout << "  -h, --help           Show help information" << std::endl;
             return 0;
         }
     }
     
     std::cout << "======================================" << std::endl;
-    std::cout << "   深圳技术大学校园导航系统 - 服务器" << std::endl;
+    std::cout << "   Campus Navigation System - Server" << std::endl;
     std::cout << "======================================" << std::endl;
-    std::cout << "端口: " << port << std::endl;
-    std::cout << "根目录: " << root_dir << std::endl;
+    std::cout << "Port: " << port << std::endl;
+    std::cout << "Root: " << root_dir << std::endl;
     std::cout << "======================================" << std::endl;
     
     HttpServer server(port, root_dir);
     g_server = &server;
     
     if (!server.start()) {
-        std::cerr << "服务器启动失败！" << std::endl;
+        std::cerr << "Server start failed!" << std::endl;
         return 1;
     }
+    
+    std::string url = "http://localhost:" + std::to_string(port);
+    std::cout << "Server started successfully!" << std::endl;
+    std::cout << "Opening browser..." << std::endl;
+    std::cout << "If browser does not open automatically, visit: " << url << std::endl;
+    std::cout << "Press Ctrl+C to stop server." << std::endl;
+    
+#ifdef _WIN32
+    std::string cmd = "start " + url;
+    system(cmd.c_str());
+#endif
     
     return 0;
 }
